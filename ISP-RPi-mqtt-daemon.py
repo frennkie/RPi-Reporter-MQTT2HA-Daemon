@@ -995,12 +995,21 @@ def get_system_temperature():
     global rpi_cpu_temp
     rpi_gpu_temp_raw = 'failed'
     cmd_fspec = get_vc_gen_cmd()
+
     if not cmd_fspec:
         rpi_system_temp = float('-1.0')
         rpi_gpu_temp = float('-1.0')
         rpi_cpu_temp = get_system_cpu_temperature()
         if rpi_cpu_temp != -1.0:
             rpi_system_temp = rpi_cpu_temp
+
+    elif not os.access("/dev/vcio", os.R_OK):
+        rpi_system_temp = float('-1.0')
+        rpi_gpu_temp = float('-1.0')
+        rpi_cpu_temp = get_system_cpu_temperature()
+        if rpi_cpu_temp != -1.0:
+            rpi_system_temp = rpi_cpu_temp
+
     else:
         retry_count = 3
         while retry_count > 0 and 'failed' in rpi_gpu_temp_raw:
