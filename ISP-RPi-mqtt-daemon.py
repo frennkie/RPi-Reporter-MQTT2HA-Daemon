@@ -1025,6 +1025,7 @@ def get_system_temperature():
             rpi_system_temp = rpi_cpu_temp
 
     else:
+        print_line('WARN: GPU temp not available - falling back to CPU'.format(rpi_gpu_temp), warning=True)
         # get temperature from CPU only
         rpi_system_temp = float('-1.0')
         rpi_gpu_temp = float('-1.0')
