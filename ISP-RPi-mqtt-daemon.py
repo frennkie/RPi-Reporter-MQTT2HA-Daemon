@@ -141,8 +141,7 @@ def on_connect(client, userdata, flags, rc):
         # _thread.start_new_thread(afterMQTTConnect, ())
         # threading.Thread(target=afterMQTTConnect).start()
         mqtt_client_connected = True
-        print_line('on_connect() mqtt_client_connected=[{}]'.format(
-            mqtt_client_connected), debug=True)
+        print_line('on_connect() mqtt_client_connected=[{}]'.format(mqtt_client_connected), debug=True)
 
         # -------------------------------------------------------------------------
         # Commands Subscription
@@ -161,8 +160,7 @@ def on_connect(client, userdata, flags, rc):
                    sd_notify=True)
         # technically NOT useful but readying possible new shape...
         mqtt_client_connected = False
-        print_line('on_connect() mqtt_client_connected=[{}]'.format(
-            mqtt_client_connected), debug=True, error=True)
+        print_line('on_connect() mqtt_client_connected=[{}]'.format(mqtt_client_connected), debug=True, error=True)
         # kill main thread
         sys.exit(1)
 
@@ -171,14 +169,11 @@ def on_disconnect(client, userdata, mid):
     global mqtt_client_connected
     mqtt_client_connected = False
     print_line('* MQTT connection lost', console=True, sd_notify=True)
-    print_line('on_disconnect() mqtt_client_connected=[{}]'.format(
-        mqtt_client_connected), debug=True)
-    pass
+    print_line('on_disconnect() mqtt_client_connected=[{}]'.format(mqtt_client_connected), debug=True)
 
 
 def on_publish(client, userdata, mid):
-    # print_line('* Data successfully published.')
-    pass
+    print_line('* Data successfully published.', debug=True)
 
 
 # -----------------------------------------------------------------------------
@@ -881,11 +876,9 @@ def get_file_system_drives():
             print_line('BAD LINE FORMAT, Skipped=[{}]'.format(curr_line), debug=True, warning=True)
             continue
         line_parts = curr_line.split()
-        print_line('line_parts({})=[{}]'.format(
-            len(line_parts), line_parts), debug=True)
+        print_line('line_parts({})=[{}]'.format(len(line_parts), line_parts), debug=True)
         if len(line_parts) < 6:
-            print_line('BAD LINE FORMAT, Skipped=[{}]'.format(
-                line_parts), debug=True, warning=True)
+            print_line('BAD LINE FORMAT, Skipped=[{}]'.format(line_parts), debug=True, warning=True)
             continue
         # tuple { total blocks, used%, mountPoint, device }
         #
@@ -929,10 +922,8 @@ def get_file_system_drives():
             rpi_filesystem_space_raw = curr_line
             rpi_filesystem_space = new_tuple[0]
             rpi_filesystem_percent = new_tuple[1]
-            print_line('rpi_filesystem_space=[{}GB]'.format(
-                new_tuple[0]), debug=True)
-            print_line('rpi_filesystem_percent=[{}]'.format(
-                new_tuple[1]), debug=True)
+            print_line('rpi_filesystem_space=[{}GB]'.format(new_tuple[0]), debug=True)
+            print_line('rpi_filesystem_percent=[{}]'.format(new_tuple[1]), debug=True)
 
     rpi_filesystem = tmp_drives
     print_line('rpi_filesystem=[{}]'.format(rpi_filesystem), debug=True)
@@ -1100,8 +1091,7 @@ def get_system_thermal_status():
             if len(values) > 0:
                 rpi_throttle_status = values
 
-    print_line('rpi_throttle_status=[{}]'.format(
-        rpi_throttle_status), debug=True)
+    print_line('rpi_throttle_status=[{}]'.format(rpi_throttle_status), debug=True)
 
 
 def interpret_throttle_value(throttle_value):
@@ -1187,8 +1177,7 @@ def get_last_install_date():
     stdout, _ = out.communicate()
     last_installed_pkg_raw = stdout.decode(
         'utf-8').rstrip().replace('/var/log/dpkg.log:', '').replace('/var/log/dpkg.log.1:', '')
-    print_line('last_installed_pkg_raw=[{}]'.format(
-        last_installed_pkg_raw), debug=True)
+    print_line('last_installed_pkg_raw=[{}]'.format(last_installed_pkg_raw), debug=True)
     line_parts = last_installed_pkg_raw.split()
     if len(line_parts) > 1:
         pkg_date_string = '{} {}'.format(line_parts[0], line_parts[1])
@@ -1200,8 +1189,7 @@ def get_last_install_date():
             pkg_date_string, '%Y-%m-%d %H:%M:%S').replace(tzinfo=local_tz)
         rpi_last_update_date = pkg_install_date
 
-    print_line('rpi_last_update_date=[{}]'.format(
-        rpi_last_update_date), debug=True)
+    print_line('rpi_last_update_date=[{}]'.format(rpi_last_update_date), debug=True)
 
 
 update_last_fetch_time = 0.0
