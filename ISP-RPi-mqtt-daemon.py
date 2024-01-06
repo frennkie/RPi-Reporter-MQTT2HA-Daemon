@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import _thread
 import argparse
 import json
 import os
@@ -140,6 +139,7 @@ def on_connect(client, userdata, flags, rc):
         print_line('* MQTT connection established', console=True, sd_notify=True)
         print_line('')  # blank line?!
         # _thread.start_new_thread(afterMQTTConnect, ())
+        # threading.Thread(target=afterMQTTConnect).start()
         mqtt_client_connected = True
         print_line('on_connect() mqtt_client_connected=[{}]'.format(
             mqtt_client_connected), debug=True)
@@ -1262,7 +1262,7 @@ def publish_shutting_down_status():
 
 def alive_timeout_handler():
     print_line('- MQTT TIMER INTERRUPT -', debug=True)
-    _thread.start_new_thread(publish_alive_status, ())
+    threading.Thread(target=publish_alive_status).start()
     start_alive_timer()
 
 
@@ -1273,8 +1273,7 @@ def start_alive_timer():
     alive_timer = threading.Timer(K_ALIVE_TIMOUT_IN_SECONDS, alive_timeout_handler)
     alive_timer.start()
     alive_timer_running_status = True
-    print_line(
-        '- started MQTT timer - every {} seconds'.format(K_ALIVE_TIMOUT_IN_SECONDS), debug=True)
+    print_line('- started MQTT timer - every {} seconds'.format(K_ALIVE_TIMOUT_IN_SECONDS), debug=True)
 
 
 def stop_alive_timer():
@@ -1548,8 +1547,7 @@ def start_period_timer():
     global end_period_timer
     global period_time_running_status
     stop_period_timer()
-    end_period_timer = threading.Timer(
-        interval_in_minutes * 60.0, period_timeout_handler)
+    end_period_timer = threading.Timer(interval_in_minutes * 60.0, period_timeout_handler)
     end_period_timer.start()
     period_time_running_status = True
     print_line('- started PERIOD timer - every {} seconds'.format(interval_in_minutes * 60.0), debug=True)
@@ -1569,8 +1567,7 @@ def is_period_timer_running():
 
 
 # our TIMER
-end_period_timer = threading.Timer(
-    interval_in_minutes * 60.0, period_timeout_handler)
+end_period_timer = threading.Timer(interval_in_minutes * 60.0, period_timeout_handler)
 # our BOOL tracking state of TIMER
 period_time_running_status = False
 reported_first_time = False
@@ -1696,7 +1693,7 @@ def send_status(timestamp, _):
     rpi_top_dict = OrderedDict()
     rpi_top_dict[K_LD_PAYLOAD_NAME] = rpi_data
 
-    _thread.start_new_thread(publish_monitor_data, (rpi_top_dict, values_topic))
+    threading.Thread(target=publish_monitor_data, args=(rpi_top_dict, values_topic)).start()
 
 
 def force_single_digit(temperature):
@@ -1835,7 +1832,8 @@ def handle_interrupt(channel):
 
     if opt_stall is False or reported_first_time is False and opt_stall is True:
         # ok, report our new detection to MQTT
-        _thread.start_new_thread(send_status, (current_timestamp, ''))
+        threading.Thread(target=send_status, args=(current_timestamp, '')).start()
+
         reported_first_time = True
     else:
         print_line(source_id + " >> Time to report! (%s) but SKIPPED (TEST: stall)" %
