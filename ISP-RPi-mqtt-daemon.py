@@ -42,28 +42,41 @@ project_url = 'https://github.com/ironsheep/RPi-Reporter-MQTT2HA-Daemon'
 
 signal(SIGPIPE, SIG_DFL)
 
-# we'll use this throughout
-local_tz = get_localzone()
-
 # turn off insecure connection warnings (our KZ0Q site has bad certs)
 # REF: https://www.geeksforgeeks.org/how-to-disable-security-certificate-checks-for-requests-in-python/
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-# TODO:
-#  - add announcement of free-space and temperature endpoints
-
-# Argparse
-opt_debug = False
-opt_verbose = False
+# we'll use this throughout
+local_tz = get_localzone()
 
 # Systemd Service Notifications - https://github.com/bb4242/sdnotify
 sd_notifier = sdnotify.SystemdNotifier()
 
 
-# Logging function
+# TODO:
+#  - add announcement of free-space and temperature endpoints
+
+# Argparse
+parser = argparse.ArgumentParser(
+    description=project_name, epilog='For further details see: ' + project_url)
+parser.add_argument("-v", "--verbose",
+                    help="increase output verbosity", action="store_true")
+parser.add_argument(
+    "-d", "--debug", help="show debug output", action="store_true")
+parser.add_argument(
+    "-s", "--stall", help="TEST: report only the first time", action="store_true")
+parser.add_argument("-c", '--config_dir',
+                    help='set directory where config.ini is located', default=sys.path[0])
+parse_args = parser.parse_args()
+
+config_dir = parse_args.config_dir
+opt_debug = parse_args.debug
+opt_verbose = parse_args.verbose
+opt_stall = parse_args.stall
 
 
 def print_line(text, error=False, warning=False, info=False, verbose=False, debug=False, console=True, sd_notify=False):
+    """Logging function"""
     timestamp = strftime('%Y-%m-%d %H:%M:%S', localtime())
     if sd_notify:
         text = '* NOTIFY: {}'.format(text)
@@ -101,24 +114,6 @@ def clean_identifier(name):
     clean = unidecode(clean)
     return clean
 
-
-# Argparse
-parser = argparse.ArgumentParser(
-    description=project_name, epilog='For further details see: ' + project_url)
-parser.add_argument("-v", "--verbose",
-                    help="increase output verbosity", action="store_true")
-parser.add_argument(
-    "-d", "--debug", help="show debug output", action="store_true")
-parser.add_argument(
-    "-s", "--stall", help="TEST: report only the first time", action="store_true")
-parser.add_argument("-c", '--config_dir',
-                    help='set directory where config.ini is located', default=sys.path[0])
-parse_args = parser.parse_args()
-
-config_dir = parse_args.config_dir
-opt_debug = parse_args.debug
-opt_verbose = parse_args.verbose
-opt_stall = parse_args.stall
 
 print_line('--------------------------------------------------------------------', debug=True)
 print_line(script_info, info=True)
@@ -910,11 +905,11 @@ def getFileSystemDrives():
         #
 
         # locate our % used field...
+        percent_field_index = 0
         for percent_field_index in range(len(lineParts) - 2, 1, -1):
             if '%' in lineParts[percent_field_index]:
                 break
-        print_line('percent_field_index=[{}]'.format(
-            percent_field_index), debug=True)
+        print_line('percent_field_index=[{}]'.format(percent_field_index), debug=True)
 
         total_size_idx = percent_field_index - 3
         mount_idx = percent_field_index + 1
@@ -1818,11 +1813,11 @@ def getCPUDictionary():
     return cpuDict
 
 
-def publishMonitorData(latestData, topic):
+def publishMonitorData(latest_data, topic):
     print_line('Publishing to MQTT topic "{}, Data:{}"'.format(
-        topic, json.dumps(latestData)))
+        topic, json.dumps(latest_data)))
     mqtt_client.publish('{}'.format(topic), json.dumps(
-        latestData), 1, retain=False)
+        latest_data), 1, retain=False)
     sleep(0.5)  # some slack for the publish roundtrip and callback function
 
 
