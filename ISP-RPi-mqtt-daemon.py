@@ -189,12 +189,12 @@ def on_subscribe(client, userdata, mid, granted_qos):
     print_line('on_subscribe() - {} - {}'.format(str(mid), str(granted_qos)), debug=True, sd_notify=True)
 
 
-shell_cmd_fspec = ''
+shell_cmd_fspec = None
 
 
 def on_message(client, userdata, message):
     global shell_cmd_fspec
-    if shell_cmd_fspec == '':
+    if not shell_cmd_fspec:
         shell_cmd_fspec = get_shell_cmd()
         if shell_cmd_fspec == '':
             print_line('* Failed to locate shell Command!', error=True)
@@ -432,8 +432,8 @@ def get_device_cpu_info():
     lines = stdout.decode('utf-8').split("\n")
     trimmed_lines = []
     for curr_line in lines:
-        trimmedLine = curr_line.lstrip().rstrip()
-        trimmed_lines.append(trimmedLine)
+        trimmed_line = curr_line.lstrip().rstrip()
+        trimmed_lines.append(trimmed_line)
     cpu_hardware = ''  # 'hardware'
     cpu_cores = 0  # count of 'processor' lines
     _cpu_model = ''  # 'model name'
@@ -804,7 +804,7 @@ def get_previous_network_data(interface, field):
 
 def get_network_ifs():
     ip_cmd = get_ip_cmd()
-    if ip_cmd != '':
+    if ip_cmd:
         get_network_ifs_using_ip(ip_cmd)
     else:
         cmd_string = ('/sbin/ifconfig | /bin/egrep "Link|flags|inet |ether " | '
@@ -1003,7 +1003,7 @@ def get_system_temperature():
     global rpi_cpu_temp
     rpi_gpu_temp_raw = 'failed'
     cmd_fspec = get_vc_gen_cmd()
-    if cmd_fspec == '':
+    if not cmd_fspec:
         rpi_system_temp = float('-1.0')
         rpi_gpu_temp = float('-1.0')
         rpi_cpu_temp = get_system_cpu_temperature()
@@ -1012,8 +1012,7 @@ def get_system_temperature():
     else:
         retry_count = 3
         while retry_count > 0 and 'failed' in rpi_gpu_temp_raw:
-            cmd_string = "{} measure_temp | /bin/sed -e 's/\\x0//g'".format(
-                cmd_fspec)
+            cmd_string = "{} measure_temp | /bin/sed -e 's/\\x0//g'".format(cmd_fspec)
             out = subprocess.Popen(cmd_string,
                                    shell=True,
                                    stdout=subprocess.PIPE,
@@ -1025,10 +1024,10 @@ def get_system_temperature():
             sleep(1)
 
         if 'failed' in rpi_gpu_temp_raw:
-            interpretedTemp = float('-1.0')
+            interpreted_temp = float('-1.0')
         else:
-            interpretedTemp = float(rpi_gpu_temp_raw)
-        rpi_gpu_temp = interpretedTemp
+            interpreted_temp = float(rpi_gpu_temp_raw)
+        rpi_gpu_temp = interpreted_temp
         print_line('rpi_gpu_temp=[{}]'.format(rpi_gpu_temp), debug=True)
 
         rpi_cpu_temp = get_system_cpu_temperature()
@@ -1041,8 +1040,7 @@ def get_system_temperature():
 
 def get_system_cpu_temperature():
     cmd_locn1 = '/sys/class/thermal/thermal_zone0/temp'
-    cmd_string = '/bin/cat {}'.format(
-        cmd_locn1)
+    cmd_string = '/bin/cat {}'.format(cmd_locn1)
     if not os.path.exists(cmd_locn1):
         _rpi_cpu_temp = float('-1.0')
     else:
@@ -1076,12 +1074,10 @@ def get_system_thermal_status():
                                stderr=subprocess.STDOUT)
         stdout, _ = out.communicate()
         rpi_throttle_status_raw = stdout.decode('utf-8').rstrip()
-        print_line('rpi_throttle_status_raw=[{}]'.format(
-            rpi_throttle_status_raw), debug=True)
+        print_line('rpi_throttle_status_raw=[{}]'.format(rpi_throttle_status_raw), debug=True)
 
         if 'throttled' not in rpi_throttle_status_raw:
-            rpi_throttle_status.append(
-                'bad response [{}] from vcgencmd'.format(rpi_throttle_status_raw))
+            rpi_throttle_status.append('bad response [{}] from vcgencmd'.format(rpi_throttle_status_raw))
         else:
             values = []
             line_parts = rpi_throttle_status_raw.split('=')
@@ -1157,10 +1153,10 @@ def get_last_update_date():
     lines = stdout.decode('utf-8').split("\n")
     trimmed_lines = []
     for curr_line in lines:
-        trimmedLine = curr_line.lstrip().rstrip()
-        if len(trimmedLine) > 0:
-            trimmed_lines.append(trimmedLine)
-    print_line('trimmedLines=[{}]'.format(trimmed_lines), debug=True)
+        trimmed_line = curr_line.lstrip().rstrip()
+        if len(trimmed_line) > 0:
+            trimmed_lines.append(trimmed_line)
+    print_line('trimmed_lines=[{}]'.format(trimmed_lines), debug=True)
 
     file_spec_latest = ''
     if len(trimmed_lines) > 0:
