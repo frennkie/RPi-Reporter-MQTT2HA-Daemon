@@ -1033,7 +1033,6 @@ def get_system_temperature():
             rpi_system_temp = rpi_cpu_temp
 
 
-
 def get_system_cpu_temperature():
     cmd_locn1 = '/sys/class/thermal/thermal_zone0/temp'
     cmd_string = '/bin/cat {}'.format(cmd_locn1)
