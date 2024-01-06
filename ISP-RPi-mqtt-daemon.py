@@ -43,13 +43,7 @@ local_tz = get_localzone()
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 # TODO:
-#  - add announcement of free-space and temperatore endpoints
-
-if False:
-    # will be caught by python 2.7 to be illegal syntax
-    print_line(
-        'Sorry, this script requires a python3 runtime environment.', file=sys.stderr)
-    os._exit(1)
+#  - add announcement of free-space and temperature endpoints
 
 # Argparse
 opt_debug = False
