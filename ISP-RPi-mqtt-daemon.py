@@ -52,7 +52,6 @@ local_tz = get_localzone()
 # Systemd Service Notifications - https://github.com/bb4242/sdnotify
 sd_notifier = sdnotify.SystemdNotifier()
 
-
 # TODO:
 #  - add announcement of free-space and temperature endpoints
 
