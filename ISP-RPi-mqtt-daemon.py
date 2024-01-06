@@ -202,15 +202,15 @@ def on_message(client, userdata, message):
             sys.exit(1)
 
     decoded_payload = message.payload.decode('utf-8')
-    command = message.topic.split('/')[-1]
-    print_line('on_message() Topic=[{}] payload=[{}] command=[{}]'.format(message.topic, message.payload, command),
+    _command = message.topic.split('/')[-1]
+    print_line('on_message() Topic=[{}] payload=[{}] _command=[{}]'.format(message.topic, message.payload, _command),
                console=True, sd_notify=True, debug=True)
 
-    if command != 'status':
-        if command in commands:
-            print_line('- Command "{}" Received - Run {} {} -'.format(command, commands[command], decoded_payload),
+    if _command != 'status':
+        if _command in commands:
+            print_line('- Command "{}" Received - Run {} {} -'.format(_command, commands[_command], decoded_payload),
                        console=True, debug=True)
-            pHandle = subprocess.Popen([shell_cmd_fspec, "-c", commands[command].format(decoded_payload)])
+            pHandle = subprocess.Popen([shell_cmd_fspec, "-c", commands[_command].format(decoded_payload)])
             output, errors = pHandle.communicate()
             if errors:
                 print_line('- Command exec says: errors=[{}]'.format(errors), console=True, debug=True)
@@ -264,9 +264,9 @@ fallback_domain = config['Daemon'].get('fallback_domain', default_domain).lower(
 
 commands = OrderedDict([])
 if config.has_section('Commands'):
-    commandSet = dict(config['Commands'].items())
-    if len(commandSet) > 0:
-        commands.update(commandSet)
+    command_set = dict(config['Commands'].items())
+    if len(command_set) > 0:
+        commands.update(command_set)
 
 # -----------------------------------------------------------------------------
 #  Commands Subscription
@@ -314,7 +314,7 @@ def get_daemon_releases():
 
     response = requests.request('GET', 'http://kz0q.com/daemon-releases', verify=False)
     if response.status_code != 200:
-        print_line('- getDaemonReleases() RQST status=({})'.format(response.status_code), error=True)
+        print_line('- get_daemon_releases() RQST status=({})'.format(response.status_code), error=True)
         daemon_version_list = ['NOT-LOADED']  # mark as NOT fetched
     else:
         content = response.text
@@ -326,9 +326,9 @@ def get_daemon_releases():
                 # print_line('- RLS line_parts=[{}]'.format(line_parts), debug=True)
                 if len(line_parts) >= 2:
                     curr_version = line_parts[0]
-                    rlsType = line_parts[1]
+                    rls_type = line_parts[1]
                     if curr_version not in new_version_list:
-                        if 'latest' not in rlsType.lower():
+                        if 'latest' not in rls_type.lower():
                             new_version_list.append(curr_version)  # append to list
                         else:
                             latestVersion = curr_version
@@ -374,9 +374,9 @@ rpi_mqtt_script = script_info
 rpi_interfaces = []
 rpi_filesystem = []
 # Tuple (Total, Free, Avail., Swap Total, Swap Free)
-rpi_memory_tuple = ''
+rpi_memory_tuple = ()
 # Tuple (Hardware, Model Name, NbrCores, BogoMIPS, Serial)
-rpi_cpu_tuple = ''
+rpi_cpu_tuple = ()
 # for thermal status reporting
 rpi_throttle_status = []
 # new cpu loads
@@ -430,29 +430,29 @@ def get_device_cpu_info():
                            stderr=subprocess.STDOUT)
     stdout, _ = out.communicate()
     lines = stdout.decode('utf-8').split("\n")
-    trimmedLines = []
-    for currLine in lines:
-        trimmedLine = currLine.lstrip().rstrip()
-        trimmedLines.append(trimmedLine)
+    trimmed_lines = []
+    for curr_line in lines:
+        trimmedLine = curr_line.lstrip().rstrip()
+        trimmed_lines.append(trimmedLine)
     cpu_hardware = ''  # 'hardware'
     cpu_cores = 0  # count of 'processor' lines
-    cpu_model = ''  # 'model name'
+    _cpu_model = ''  # 'model name'
     cpu_bogoMIPS = 0.0  # sum of 'BogoMIPS' lines
     cpu_serial = ''  # 'serial'
-    for currLine in trimmedLines:
-        lineParts = currLine.split(':')
+    for curr_line in trimmed_lines:
+        lineParts = curr_line.split(':')
         currValue = '{?unk?}'
         if len(lineParts) >= 2:
             currValue = lineParts[1].lstrip().rstrip()
-        if 'Hardware' in currLine:
+        if 'Hardware' in curr_line:
             cpu_hardware = currValue
-        if 'model name' in currLine:
-            cpu_model = currValue
-        if 'BogoMIPS' in currLine:
+        if 'model name' in curr_line:
+            _cpu_model = currValue
+        if 'BogoMIPS' in curr_line:
             cpu_bogoMIPS += float(currValue)
-        if 'processor' in currLine:
+        if 'processor' in curr_line:
             cpu_cores += 1
-        if 'Serial' in currLine:
+        if 'Serial' in curr_line:
             cpu_serial = currValue
 
     out = subprocess.Popen("/bin/cat /proc/loadavg",
@@ -467,7 +467,7 @@ def get_device_cpu_info():
     cpu_load15 = round(float(float(cpu_loads_raw[2]) / int(cpu_cores) * 100), 1)
 
     # Tuple (Hardware, Model Name, NbrCores, BogoMIPS, Serial)
-    rpi_cpu_tuple = (cpu_hardware, cpu_model, cpu_cores,
+    rpi_cpu_tuple = (cpu_hardware, _cpu_model, cpu_cores,
                      cpu_bogoMIPS, cpu_serial, cpu_load1, cpu_load5, cpu_load15)
     print_line('rpi_cpu_tuple=[{}]'.format(rpi_cpu_tuple), debug=True)
 
@@ -622,7 +622,8 @@ def get_uptime():
     # Ex: 10 days, 23:57
     # Ex: 27 days, 27 min
     # Ex: 0 min
-    b_has_colon = (':' in rpi_uptime)
+
+    # b_has_colon = (':' in rpi_uptime)  # is not used
     uptime_parts = rpi_uptime.split(',')
     print_line('- uptime_parts=[{}]'.format(uptime_parts), debug=True)
     if len(uptime_parts) > 1:
@@ -761,7 +762,7 @@ def load_network_if_details_from_lines(if_config_lines):
                     imterfc, line_parts), debug=True)
                 if 'inet' in curr_line:  # OLDER & NEWER
                     new_tuple = (imterfc, 'IP',
-                                line_parts[1].replace('addr:', ''))
+                                 line_parts[1].replace('addr:', ''))
                     tmp_interfaces.append(new_tuple)
                     print_line('new_tuple=[{}]'.format(new_tuple), debug=True)
                 elif 'ether' in curr_line:  # NEWER ONLY
@@ -816,9 +817,9 @@ def get_network_ifs():
         lines = stdout.decode('utf-8').split("\n")
         trimmed_lines = []
         for curr_line in lines:
-            trimmedLine = curr_line.lstrip().rstrip()
-            if len(trimmedLine) > 0:
-                trimmed_lines.append(trimmedLine)
+            trimmed_line = curr_line.lstrip().rstrip()
+            if len(trimmed_line) > 0:
+                trimmed_lines.append(trimmed_line)
 
         print_line('trimmed_lines=[{}]'.format(trimmed_lines), debug=True)
 
@@ -842,7 +843,7 @@ def get_file_system_drives():
         if len(trimmed_line) > 0:
             trimmed_lines.append(trimmed_line)
 
-    print_line('getFileSystemDrives() trimmed_lines=[{}]'.format(trimmed_lines), debug=True)
+    print_line('get_file_system_drives() trimmed_lines=[{}]'.format(trimmed_lines), debug=True)
 
     #  EXAMPLES
     #
@@ -920,18 +921,18 @@ def get_file_system_drives():
 
         total_size_in_gb = '{:.0f}'.format(
             next_power_of_2(line_parts[total_size_idx]))
-        newTuple = (total_size_in_gb, line_parts[percent_field_index].replace(
+        new_tuple = (total_size_in_gb, line_parts[percent_field_index].replace(
             '%', ''), mount_point, device)
-        tmp_drives.append(newTuple)
-        print_line('newTuple=[{}]'.format(newTuple), debug=True)
-        if newTuple[2] == '/':
+        tmp_drives.append(new_tuple)
+        print_line('new_tuple=[{}]'.format(new_tuple), debug=True)
+        if new_tuple[2] == '/':
             rpi_filesystem_space_raw = curr_line
-            rpi_filesystem_space = newTuple[0]
-            rpi_filesystem_percent = newTuple[1]
+            rpi_filesystem_space = new_tuple[0]
+            rpi_filesystem_percent = new_tuple[1]
             print_line('rpi_filesystem_space=[{}GB]'.format(
-                newTuple[0]), debug=True)
+                new_tuple[0]), debug=True)
             print_line('rpi_filesystem_percent=[{}]'.format(
-                newTuple[1]), debug=True)
+                new_tuple[1]), debug=True)
 
     rpi_filesystem = tmp_drives
     print_line('rpi_filesystem=[{}]'.format(rpi_filesystem), debug=True)
@@ -1043,7 +1044,7 @@ def get_system_cpu_temperature():
     cmd_string = '/bin/cat {}'.format(
         cmd_locn1)
     if not os.path.exists(cmd_locn1):
-        rpi_cpu_temp = float('-1.0')
+        _rpi_cpu_temp = float('-1.0')
     else:
         out = subprocess.Popen(cmd_string,
                                shell=True,
@@ -1051,9 +1052,9 @@ def get_system_cpu_temperature():
                                stderr=subprocess.STDOUT)
         stdout, _ = out.communicate()
         rpi_cpu_temp_raw = stdout.decode('utf-8').rstrip()
-        rpi_cpu_temp = float(rpi_cpu_temp_raw) / 1000.0
-    print_line('rpi_cpu_temp=[{}]'.format(rpi_cpu_temp), debug=True)
-    return rpi_cpu_temp
+        _rpi_cpu_temp = float(rpi_cpu_temp_raw) / 1000.0
+    print_line('_rpi_cpu_temp=[{}]'.format(_rpi_cpu_temp), debug=True)
+    return _rpi_cpu_temp
 
 
 def get_system_thermal_status():
@@ -1088,7 +1089,6 @@ def get_system_thermal_status():
             rpi_throttle_value_raw = ''
             if len(line_parts) > 1:
                 rpi_throttle_value_raw = line_parts[1]
-            rpi_throttle_value = int(0)
             if len(rpi_throttle_value_raw) > 0:
                 values.append('throttled = {}'.format(rpi_throttle_value_raw))
                 if rpi_throttle_value_raw.startswith('0x'):
@@ -1676,15 +1676,15 @@ def send_status(timestamp, _):
     rpi_ram = get_memory_dictionary()
     if len(rpi_ram) > 0:
         rpi_data[K_RPI_MEMORY] = rpi_ram
-        ramSizeMB = int('{:.0f}'.format(rpi_memory_tuple[0], 10))  # "mem_space_mbytes"
+        ram_size_mb = int('{:.0f}'.format(rpi_memory_tuple[0], 10))  # "mem_space_mbytes"
         # used is total - free
-        ramUsedMB = int('{:.0f}'.format(rpi_memory_tuple[0] - rpi_memory_tuple[2]), 10)
-        ramUsedPercent = int((ramUsedMB / ramSizeMB) * 100)
-        rpi_data[K_RPI_RAM_USED] = ramUsedPercent  # "mem_used_prcnt"
+        ram_used_mb = int('{:.0f}'.format(rpi_memory_tuple[0] - rpi_memory_tuple[2]), 10)
+        ram_used_percent = int((ram_used_mb / ram_size_mb) * 100)
+        rpi_data[K_RPI_RAM_USED] = ram_used_percent  # "mem_used_prcnt"
 
-    rpiCpu = get_cpu_dictionary()
-    if len(rpiCpu) > 0:
-        rpi_data[K_RPI_CPU] = rpiCpu
+    rpi_cpu = get_cpu_dictionary()
+    if len(rpi_cpu) > 0:
+        rpi_data[K_RPI_CPU] = rpi_cpu
 
     if len(rpi_throttle_status) > 0:
         rpi_data[K_RPI_THROTTLE] = rpi_throttle_status
@@ -1697,10 +1697,10 @@ def send_status(timestamp, _):
     rpi_data[K_RPI_SCRIPT_VERSIONS] = ','.join(daemon_version_list)
     rpi_data[SCRIPT_REPORT_INTERVAL] = interval_in_minutes
 
-    rpiTopDict = OrderedDict()
-    rpiTopDict[K_LD_PAYLOAD_NAME] = rpi_data
+    rpi_top_dict = OrderedDict()
+    rpi_top_dict[K_LD_PAYLOAD_NAME] = rpi_data
 
-    _thread.start_new_thread(publish_monitor_data, (rpiTopDict, values_topic))
+    _thread.start_new_thread(publish_monitor_data, (rpi_top_dict, values_topic))
 
 
 def force_single_digit(temperature):
@@ -1774,7 +1774,7 @@ def get_memory_dictionary():
     # TYPICAL:
     #   Tuple (Total, Free, Avail.)
     memory_data = OrderedDict()
-    if rpi_memory_tuple != '':
+    if rpi_memory_tuple:
         # TODO: remove free fr
         memory_data[K_RPI_MEM_TOTAL] = round(rpi_memory_tuple[0])
         memory_data[K_RPI_MEM_FREE] = round(rpi_memory_tuple[2])
