@@ -1,31 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import _thread
-from datetime import datetime, timedelta
-from tzlocal import get_localzone
-import threading
-import socket
-import os
-import subprocess
-import uuid
-import ssl
-import sys
-import re
-import json
-import os.path
 import argparse
-from time import time, sleep, localtime, strftime
+import json
+import os
+import os.path
+import ssl
+import subprocess
+import sys
+import threading
 from collections import OrderedDict
-from colorama import init as colorama_init
-from colorama import Fore, Back, Style
 from configparser import ConfigParser
-from unidecode import unidecode
-import paho.mqtt.client as mqtt
-import sdnotify
+from datetime import datetime
 from signal import signal, SIGPIPE, SIG_DFL
-signal(SIGPIPE, SIG_DFL)
-import time
+from time import time, sleep, localtime, strftime
+
+import paho.mqtt.client as mqtt
 import requests
+import sdnotify
+from colorama import Fore, Style
+from tzlocal import get_localzone
+from unidecode import unidecode
 from urllib3.exceptions import InsecureRequestWarning
 
 apt_available = True
@@ -390,7 +385,8 @@ if apt_available == False:
     rpi_update_count = -1   # if packaging system not avail. report -1
 
 # Time for network transfer calculation
-previous_time = time.time()
+previous_time = time()
+
 
 # -----------------------------------------------------------------------------
 #  monitor variable fetch routines
@@ -723,7 +719,7 @@ def loadNetworkIFDetailsFromLines(ifConfigLines):
     haveIF = False
     imterfc = ''
     rpi_mac = ''
-    current_time = time.time()
+    current_time = time()
     if current_time == previous_time:
         current_time += 1
 
@@ -1198,7 +1194,8 @@ def getNumberOfAvailableUpdates():
         print_line('APT Avail Updates: ({})'.format(len(changes)), info=True)
         # return str(cache.get_changes().len())
         rpi_update_count = len(changes)
-        update_last_fetch_time = time.time()
+        update_last_fetch_time = time()
+
 
 # get our hostnames so we can setup MQTT
 getHostnames()
@@ -1848,7 +1845,7 @@ try:
         #  our INTERVAL timer does the work
         sleep(10000)
 
-        timeNow = time.time()
+        timeNow = time()
         if timeNow > daemon_last_fetch_time + kVersionCheckIntervalInSeconds:
             getDaemonReleases() # and load them!
 
