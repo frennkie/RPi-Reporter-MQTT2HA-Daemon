@@ -173,6 +173,7 @@ def on_disconnect(client, userdata, mid):
 
 
 def on_publish(client, userdata, mid):
+    # ToDo(frennkie): Consider setting this back to "pass" as it was
     print_line('* Data successfully published.', debug=True)
 
 
