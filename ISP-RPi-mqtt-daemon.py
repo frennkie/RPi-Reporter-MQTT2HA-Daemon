@@ -1872,31 +1872,37 @@ def after_mqtt_connect():
 # stopAliveTimer()
 # exit(0)
 
-after_mqtt_connect()  # now instead of after?
 
-# check every 12 hours (twice a day) = 12 hours * 60 minutes * 60 seconds
-kVersionCheckIntervalInSeconds = (12 * 60 * 60)
-# check every 4 hours (6 times a day) = 4 hours * 60 minutes * 60 seconds
-kUpdateCheckIntervalInSeconds = (check_interval_in_hours * 60 * 60)
+def main():
+    after_mqtt_connect()  # now instead of after?
 
-# now just hang in forever loop until script is stopped externally
-try:
-    while True:
-        #  our INTERVAL timer does the work
-        sleep(10000)
+    # check every 12 hours (twice a day) = 12 hours * 60 minutes * 60 seconds
+    kVersionCheckIntervalInSeconds = (12 * 60 * 60)
+    # check every 4 hours (6 times a day) = 4 hours * 60 minutes * 60 seconds
+    kUpdateCheckIntervalInSeconds = (check_interval_in_hours * 60 * 60)
 
-        timeNow = time()
-        if timeNow > daemon_last_fetch_time + kVersionCheckIntervalInSeconds:
-            get_daemon_releases()  # and load them!
+    # now just hang in forever loop until script is stopped externally
+    try:
+        while True:
+            #  our INTERVAL timer does the work
+            sleep(10000)
 
-        if apt_available:
-            if timeNow > update_last_fetch_time + kUpdateCheckIntervalInSeconds:
-                get_number_of_available_updates()  # and count them!
+            timeNow = time()
+            if timeNow > daemon_last_fetch_time + kVersionCheckIntervalInSeconds:
+                get_daemon_releases()  # and load them!
 
-finally:
-    # cleanup used pins... just because we like cleaning up after us
-    publish_shutting_down_status()
-    stop_period_timer()  # don't leave our timers running!
-    stop_alive_timer()
-    mqtt_client.disconnect()
-    print_line('* MQTT Disconnect()', verbose=True)
+            if apt_available:
+                if timeNow > update_last_fetch_time + kUpdateCheckIntervalInSeconds:
+                    get_number_of_available_updates()  # and count them!
+
+    finally:
+        # cleanup used pins... just because we like cleaning up after us
+        publish_shutting_down_status()
+        stop_period_timer()  # don't leave our timers running!
+        stop_alive_timer()
+        mqtt_client.disconnect()
+        print_line('* MQTT Disconnect()', verbose=True)
+
+
+if __name__ == '__main__':
+    main()
