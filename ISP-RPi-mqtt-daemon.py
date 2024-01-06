@@ -1551,25 +1551,25 @@ TIMER_INTERRUPT = (-1)
 TEST_INTERRUPT = (-2)
 
 
-def periodTimeoutHandler():
+def period_timeout_handler():
     print_line('- PERIOD TIMER INTERRUPT -', debug=True)
     handle_interrupt(TIMER_INTERRUPT)  # '0' means we have a timer interrupt!!!
-    startPeriodTimer()
+    start_period_timer()
 
 
-def startPeriodTimer():
+def start_period_timer():
     global endPeriodTimer
     global periodTimeRunningStatus
-    stopPeriodTimer()
+    stop_period_timer()
     endPeriodTimer = threading.Timer(
-        interval_in_minutes * 60.0, periodTimeoutHandler)
+        interval_in_minutes * 60.0, period_timeout_handler)
     endPeriodTimer.start()
     periodTimeRunningStatus = True
     print_line(
         '- started PERIOD timer - every {} seconds'.format(interval_in_minutes * 60.0), debug=True)
 
 
-def stopPeriodTimer():
+def stop_period_timer():
     global endPeriodTimer
     global periodTimeRunningStatus
     endPeriodTimer.cancel()
@@ -1577,14 +1577,14 @@ def stopPeriodTimer():
     print_line('- stopped PERIOD timer', debug=True)
 
 
-def isPeriodTimerRunning():
+def is_period_timer_running():
     global periodTimeRunningStatus
     return periodTimeRunningStatus
 
 
 # our TIMER
 endPeriodTimer = threading.Timer(
-    interval_in_minutes * 60.0, periodTimeoutHandler)
+    interval_in_minutes * 60.0, period_timeout_handler)
 # our BOOL tracking state of TIMER
 periodTimeRunningStatus = False
 reported_first_time = False
@@ -1860,7 +1860,7 @@ def after_mqtt_connect():
     print_line('* afterMQTTConnect()', verbose=True)
     #  NOTE: this is run after MQTT connects
     # start our interval timer
-    startPeriodTimer()
+    start_period_timer()
     # do our first report
     handle_interrupt(0)
 
@@ -1897,7 +1897,7 @@ try:
 finally:
     # cleanup used pins... just because we like cleaning up after us
     publish_shutting_down_status()
-    stopPeriodTimer()  # don't leave our timers running!
+    stop_period_timer()  # don't leave our timers running!
     stop_alive_timer()
     mqtt_client.disconnect()
     print_line('* MQTT Disconnect()', verbose=True)
