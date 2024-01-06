@@ -130,8 +130,7 @@ if opt_stall:
 # Eclipse Paho callbacks - http://www.eclipse.org/paho/clients/python/docs/#callbacks
 
 mqtt_client_connected = False
-print_line(
-    '* init mqtt_client_connected=[{}]'.format(mqtt_client_connected), debug=True)
+print_line('* init mqtt_client_connected=[{}]'.format(mqtt_client_connected), debug=True)
 mqtt_client_should_attempt_reconnect = True
 
 
@@ -227,16 +226,15 @@ try:
     with open(os.path.join(config_dir, 'config.ini')) as config_file:
         config.read_file(config_file)
 except IOError:
-    print_line('No configuration file "config.ini"',
-               error=True, sd_notify=True)
+    print_line('No configuration file "config.ini"', error=True, sd_notify=True)
     sys.exit(1)
 
 daemon_enabled = config['Daemon'].getboolean('enabled', True)
 
+# ToDo(frennkie): This (update_flag_filespec) is not used anywhere
 # This script uses a flag file containing a date/timestamp of when the system was last updated
 default_update_flag_filespec = '/home/pi/bin/lastupd.date'
-update_flag_filespec = config['Daemon'].get(
-    'update_flag_filespec', default_update_flag_filespec)
+update_flag_filespec = config['Daemon'].get('update_flag_filespec', default_update_flag_filespec)
 
 default_base_topic = 'home/nodes'
 base_topic = config['MQTT'].get('base_topic', default_base_topic).lower()
@@ -246,27 +244,23 @@ sensor_name = config['MQTT'].get('sensor_name', default_sensor_name).lower()
 
 # by default Home Assistant listens to the /homeassistant, but it can be changed for a given installation
 default_discovery_prefix = 'homeassistant'
-discovery_prefix = config['MQTT'].get(
-    'discovery_prefix', default_discovery_prefix).lower()
+discovery_prefix = config['MQTT'].get('discovery_prefix', default_discovery_prefix).lower()
 
 # report our RPi values every 5min
 min_interval_in_minutes = 1
 max_interval_in_minutes = 30
 default_interval_in_minutes = 5
-interval_in_minutes = config['Daemon'].getint(
-    'interval_in_minutes', default_interval_in_minutes)
+interval_in_minutes = config['Daemon'].getint('interval_in_minutes', default_interval_in_minutes)
 
 # check our RPi pending-updates every 4 hours
 min_check_interval_in_hours = 2
 max_check_interval_in_hours = 24
 default_check_interval_in_hours = 4
-check_interval_in_hours = config['Daemon'].getint(
-    'check_updates_in_hours', default_check_interval_in_hours)
+check_interval_in_hours = config['Daemon'].getint('check_updates_in_hours', default_check_interval_in_hours)
 
 # default domain when hostname -f doesn't return it
 default_domain = ''
-fallback_domain = config['Daemon'].get(
-    'fallback_domain', default_domain).lower()
+fallback_domain = config['Daemon'].get('fallback_domain', default_domain).lower()
 
 commands = OrderedDict([])
 if config.has_section('Commands'):
@@ -315,7 +309,7 @@ def get_daemon_releases():
     global daemon_version_list
     global daemon_last_fetch_time
 
-    newVersionList = []
+    new_version_list = []
     latestVersion = ''
 
     response = requests.request('GET', 'http://kz0q.com/daemon-releases', verify=False)
@@ -328,24 +322,24 @@ def get_daemon_releases():
         for line in lines:
             if len(line) > 0:
                 # print_line('- RLS Line=[{}]'.format(line), debug=True)
-                lineParts = line.split(' ')
-                # print_line('- RLS lineParts=[{}]'.format(lineParts), debug=True)
-                if len(lineParts) >= 2:
-                    currVersion = lineParts[0]
-                    rlsType = lineParts[1]
-                    if currVersion not in newVersionList:
+                line_parts = line.split(' ')
+                # print_line('- RLS line_parts=[{}]'.format(line_parts), debug=True)
+                if len(line_parts) >= 2:
+                    curr_version = line_parts[0]
+                    rlsType = line_parts[1]
+                    if curr_version not in new_version_list:
                         if 'latest' not in rlsType.lower():
-                            newVersionList.append(currVersion)  # append to list
+                            new_version_list.append(curr_version)  # append to list
                         else:
-                            latestVersion = currVersion
+                            latestVersion = curr_version
 
-        if len(newVersionList) > 1:
-            newVersionList.sort()
+        if len(new_version_list) > 1:
+            new_version_list.sort()
         if len(latestVersion) > 0:
-            if latestVersion not in newVersionList:
-                newVersionList.insert(0, latestVersion)  # append to list
+            if latestVersion not in new_version_list:
+                new_version_list.insert(0, latestVersion)  # append to list
 
-        daemon_version_list = newVersionList
+        daemon_version_list = new_version_list
         print_line('- RQST daemon_version_list=({})'.format(daemon_version_list), debug=True)
         daemon_last_fetch_time = time()  # record when we last fetched the versions
 
@@ -490,27 +484,27 @@ def get_device_memory():
                            stderr=subprocess.STDOUT)
     stdout, _ = out.communicate()
     lines = stdout.decode('utf-8').split("\n")
-    trimmedLines = []
-    for currLine in lines:
-        trimmedLine = currLine.lstrip().rstrip()
-        trimmedLines.append(trimmedLine)
+    trimmed_lines = []
+    for curr_line in lines:
+        trimmed_line = curr_line.lstrip().rstrip()
+        trimmed_lines.append(trimmed_line)
     mem_total = ''
     mem_free = ''
     mem_avail = ''
     swap_total = ''
     swap_free = ''
-    for currLine in trimmedLines:
-        lineParts = currLine.split()
-        if 'MemTotal' in currLine:
-            mem_total = float(lineParts[1]) / 1024
-        if 'MemFree' in currLine:
-            mem_free = float(lineParts[1]) / 1024
-        if 'MemAvail' in currLine:
-            mem_avail = float(lineParts[1]) / 1024
-        if 'SwapTotal' in currLine:
-            swap_total = float(lineParts[1]) / 1024
-        if 'SwapFree' in currLine:
-            swap_free = float(lineParts[1]) / 1024
+    for curr_line in trimmed_lines:
+        line_parts = curr_line.split()
+        if 'MemTotal' in curr_line:
+            mem_total = float(line_parts[1]) / 1024
+        if 'MemFree' in curr_line:
+            mem_free = float(line_parts[1]) / 1024
+        if 'MemAvail' in curr_line:
+            mem_avail = float(line_parts[1]) / 1024
+        if 'SwapTotal' in curr_line:
+            swap_total = float(line_parts[1]) / 1024
+        if 'SwapFree' in curr_line:
+            swap_free = float(line_parts[1]) / 1024
 
     # Tuple (Total, Free, Avail., Swap Total, Swap Free)
     rpi_memory_tuple = (mem_total, mem_free, mem_avail, swap_total,
@@ -628,44 +622,43 @@ def get_uptime():
     # Ex: 10 days, 23:57
     # Ex: 27 days, 27 min
     # Ex: 0 min
-    bHasColon = (':' in rpi_uptime)
-    uptimeParts = rpi_uptime.split(',')
-    print_line('- uptimeParts=[{}]'.format(uptimeParts), debug=True)
-    if len(uptimeParts) > 1:
+    b_has_colon = (':' in rpi_uptime)
+    uptime_parts = rpi_uptime.split(',')
+    print_line('- uptime_parts=[{}]'.format(uptime_parts), debug=True)
+    if len(uptime_parts) > 1:
         # have days and time
-        dayParts = uptimeParts[0].strip().split(' ')
-        daysVal = int(dayParts[0])
-        timeStr = uptimeParts[1].strip()
+        day_parts = uptime_parts[0].strip().split(' ')
+        days_val = int(day_parts[0])
+        time_str = uptime_parts[1].strip()
     else:
         # have time only
-        daysVal = 0
-        timeStr = uptimeParts[0].strip()
-    print_line('- days=({}), timeStr=[{}]'.format(daysVal, timeStr), debug=True)
-    if ':' in timeStr:
-        # timeStr = '23:57'
-        timeParts = timeStr.split(':')
-        hoursVal = int(timeParts[0])
-        minsVal = int(timeParts[1])
+        days_val = 0
+        time_str = uptime_parts[0].strip()
+    print_line('- days=({}), time_str=[{}]'.format(days_val, time_str), debug=True)
+    if ':' in time_str:
+        # time_str = '23:57'
+        time_parts = time_str.split(':')
+        hours_val = int(time_parts[0])
+        mins_val = int(time_parts[1])
     else:
-        # timeStr = 27 of: '27 min'
-        hoursVal = 0
-        timeParts = timeStr.split(' ')
-        minsVal = int(timeParts[0])
-    print_line('- hoursVal=({}), minsVal=({})'.format(hoursVal, minsVal), debug=True)
-    rpi_uptime_sec = (minsVal * 60) + (hoursVal * 60 * 60) + (daysVal * 24 * 60 * 60)
+        # time_str = 27 of: '27 min'
+        hours_val = 0
+        time_parts = time_str.split(' ')
+        mins_val = int(time_parts[0])
+    print_line('- hours_val=({}), minsVal=({})'.format(hours_val, mins_val), debug=True)
+    rpi_uptime_sec = (mins_val * 60) + (hours_val * 60 * 60) + (days_val * 24 * 60 * 60)
     print_line('rpi_uptime_sec=({})'.format(rpi_uptime_sec), debug=True)
 
 
 def get_network_ifs_using_ip(ip_cmd):
-    cmd_str = '{} link show | /bin/egrep -v "link" | /bin/egrep " eth| wlan"'.format(
-        ip_cmd)
+    cmd_str = '{} link show | /bin/egrep -v "link" | /bin/egrep " eth| wlan"'.format(ip_cmd)
     out = subprocess.Popen(cmd_str,
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
     stdout, _ = out.communicate()
     lines = stdout.decode('utf-8').split("\n")
-    interfaceNames = []
+    interface_names = []
     line_count = len(lines)
     if line_count > 2:
         line_count = 2
@@ -673,42 +666,42 @@ def get_network_ifs_using_ip(ip_cmd):
         print_line('ERROR no lines left by ip(8) filter!', error=True)
         sys.exit(1)
 
-    for lineIdx in range(line_count):
-        trimmedLine = lines[lineIdx].lstrip().rstrip()
-        if len(trimmedLine) > 0:
-            lineParts = trimmedLine.split()
-            interfaceName = lineParts[1].replace(':', '')
+    for line_idx in range(line_count):
+        trimmed_line = lines[line_idx].lstrip().rstrip()
+        if len(trimmed_line) > 0:
+            line_parts = trimmed_line.split()
+            interface_name = line_parts[1].replace(':', '')
             # if interface is within a  container then we have eth0@if77
-            interfaceNames.append(interfaceName)
+            interface_names.append(interface_name)
 
-    print_line('interfaceNames=[{}]'.format(interfaceNames), debug=True)
+    print_line('interface_names=[{}]'.format(interface_names), debug=True)
 
-    trimmedLines = []
-    for interface in interfaceNames:
+    trimmed_lines = []
+    for interface in interface_names:
         lines = get_single_interface_details(interface)
-        for currLine in lines:
-            trimmedLines.append(currLine)
+        for curr_line in lines:
+            trimmed_lines.append(curr_line)
 
-    load_network_if_details_from_lines(trimmedLines)
+    load_network_if_details_from_lines(trimmed_lines)
 
 
 def get_single_interface_details(interface_name):
-    cmdString = '/sbin/ifconfig {} | /bin/egrep "Link|flags|inet |ether |TX packets |RX packets "'.format(
+    cmd_string = '/sbin/ifconfig {} | /bin/egrep "Link|flags|inet |ether |TX packets |RX packets "'.format(
         interface_name)
-    out = subprocess.Popen(cmdString,
+    out = subprocess.Popen(cmd_string,
                            shell=True,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
     stdout, _ = out.communicate()
     lines = stdout.decode('utf-8').split("\n")
-    trimmedLines = []
-    for currLine in lines:
-        trimmedLine = currLine.lstrip().rstrip()
-        if len(trimmedLine) > 0:
-            trimmedLines.append(trimmedLine)
+    trimmed_lines = []
+    for curr_line in lines:
+        trimmed_line = curr_line.lstrip().rstrip()
+        if len(trimmed_line) > 0:
+            trimmed_lines.append(trimmed_line)
 
-    # print_line('interface:[{}] trimmedLines=[{}]'.format(interfaceName, trimmedLines), debug=True)
-    return trimmedLines
+    # print_line('interface:[{}] trimmed_lines=[{}]'.format(interfaceName, trimmed_lines), debug=True)
+    return trimmed_lines
 
 
 def load_network_if_details_from_lines(if_config_lines):
@@ -732,69 +725,69 @@ def load_network_if_details_from_lines(if_config_lines):
     #    RX packets 1358790  bytes 1197368205 (1.1 GiB)
     #    TX packets 916361  bytes 150440804 (143.4 MiB)
     #
-    tmpInterfaces = []
-    haveIF = False
+    tmp_interfaces = []
+    have_if = False
     imterfc = ''
     rpi_mac = ''
     current_time = time()
     if current_time == previous_time:
         current_time += 1
 
-    for currLine in if_config_lines:
-        lineParts = currLine.split()
-        # print_line('- currLine=[{}]'.format(currLine), debug=True)
-        # print_line('- lineParts=[{}]'.format(lineParts), debug=True)
-        if len(lineParts) > 0:
+    for curr_line in if_config_lines:
+        line_parts = curr_line.split()
+        # print_line('- curr_line=[{}]'.format(curr_line), debug=True)
+        # print_line('- line_parts=[{}]'.format(line_parts), debug=True)
+        if len(line_parts) > 0:
             # skip interfaces generated by Home Assistant on RPi
-            if 'docker' in currLine or 'veth' in currLine or 'hassio' in currLine:
-                haveIF = False
+            if 'docker' in curr_line or 'veth' in curr_line or 'hassio' in curr_line:
+                have_if = False
                 continue
             # let's evaluate remaining interfaces
-            if 'flags' in currLine:  # NEWER ONLY
-                haveIF = True
-                imterfc = lineParts[0].replace(':', '')
+            if 'flags' in curr_line:  # NEWER ONLY
+                have_if = True
+                imterfc = line_parts[0].replace(':', '')
                 # print_line('newIF=[{}]'.format(imterfc), debug=True)
-            elif 'Link' in currLine:  # OLDER ONLY
-                haveIF = True
-                imterfc = lineParts[0].replace(':', '')
-                newTuple = (imterfc, 'mac', lineParts[4])
+            elif 'Link' in curr_line:  # OLDER ONLY
+                have_if = True
+                imterfc = line_parts[0].replace(':', '')
+                new_tuple = (imterfc, 'mac', line_parts[4])
                 if rpi_mac == '':
-                    rpi_mac = lineParts[4]
+                    rpi_mac = line_parts[4]
                     print_line('rpi_mac=[{}]'.format(rpi_mac), debug=True)
-                tmpInterfaces.append(newTuple)
-                print_line('newTuple=[{}]'.format(newTuple), debug=True)
-            elif haveIF:
-                print_line('IF=[{}], lineParts=[{}]'.format(
-                    imterfc, lineParts), debug=True)
-                if 'inet' in currLine:  # OLDER & NEWER
-                    newTuple = (imterfc, 'IP',
-                                lineParts[1].replace('addr:', ''))
-                    tmpInterfaces.append(newTuple)
-                    print_line('newTuple=[{}]'.format(newTuple), debug=True)
-                elif 'ether' in currLine:  # NEWER ONLY
-                    newTuple = (imterfc, 'mac', lineParts[1])
-                    tmpInterfaces.append(newTuple)
+                tmp_interfaces.append(new_tuple)
+                print_line('new_tuple=[{}]'.format(new_tuple), debug=True)
+            elif have_if:
+                print_line('IF=[{}], line_parts=[{}]'.format(
+                    imterfc, line_parts), debug=True)
+                if 'inet' in curr_line:  # OLDER & NEWER
+                    new_tuple = (imterfc, 'IP',
+                                line_parts[1].replace('addr:', ''))
+                    tmp_interfaces.append(new_tuple)
+                    print_line('new_tuple=[{}]'.format(new_tuple), debug=True)
+                elif 'ether' in curr_line:  # NEWER ONLY
+                    new_tuple = (imterfc, 'mac', line_parts[1])
+                    tmp_interfaces.append(new_tuple)
                     if rpi_mac == '':
-                        rpi_mac = lineParts[1]
+                        rpi_mac = line_parts[1]
                         print_line('rpi_mac=[{}]'.format(rpi_mac), debug=True)
-                    print_line('newTuple=[{}]'.format(newTuple), debug=True)
-                elif 'RX' in currLine:  # NEWER ONLY
+                    print_line('new_tuple=[{}]'.format(new_tuple), debug=True)
+                elif 'RX' in curr_line:  # NEWER ONLY
                     previous_value = get_previous_network_data(imterfc, 'rx_data')
-                    current_value = int(lineParts[4])
+                    current_value = int(line_parts[4])
                     rx_data = round((current_value - previous_value) / (current_time - previous_time) * 8 / 1024)
-                    newTuple = (imterfc, 'rx_data', rx_data)
-                    tmpInterfaces.append(newTuple)
-                    print_line('newTuple=[{}]'.format(newTuple), debug=True)
-                elif 'TX' in currLine:  # NEWER ONLY
+                    new_tuple = (imterfc, 'rx_data', rx_data)
+                    tmp_interfaces.append(new_tuple)
+                    print_line('new_tuple=[{}]'.format(new_tuple), debug=True)
+                elif 'TX' in curr_line:  # NEWER ONLY
                     previous_value = get_previous_network_data(imterfc, 'tx_data')
-                    current_value = int(lineParts[4])
+                    current_value = int(line_parts[4])
                     tx_data = round((current_value - previous_value) / (current_time - previous_time) * 8 / 1024)
-                    newTuple = (imterfc, 'tx_data', tx_data)
-                    tmpInterfaces.append(newTuple)
-                    print_line('newTuple=[{}]'.format(newTuple), debug=True)
-                    haveIF = False
+                    new_tuple = (imterfc, 'tx_data', tx_data)
+                    tmp_interfaces.append(new_tuple)
+                    print_line('new_tuple=[{}]'.format(new_tuple), debug=True)
+                    have_if = False
 
-    rpi_interfaces = tmpInterfaces
+    rpi_interfaces = tmp_interfaces
     print_line('rpi_interfaces=[{}]'.format(rpi_interfaces), debug=True)
     print_line('rpi_mac=[{}]'.format(rpi_mac), debug=True)
 
@@ -821,15 +814,15 @@ def get_network_ifs():
                                stderr=subprocess.STDOUT)
         stdout, _ = out.communicate()
         lines = stdout.decode('utf-8').split("\n")
-        trimmedLines = []
-        for currLine in lines:
-            trimmedLine = currLine.lstrip().rstrip()
+        trimmed_lines = []
+        for curr_line in lines:
+            trimmedLine = curr_line.lstrip().rstrip()
             if len(trimmedLine) > 0:
-                trimmedLines.append(trimmedLine)
+                trimmed_lines.append(trimmedLine)
 
-        print_line('trimmedLines=[{}]'.format(trimmedLines), debug=True)
+        print_line('trimmed_lines=[{}]'.format(trimmed_lines), debug=True)
 
-        load_network_if_details_from_lines(trimmedLines)
+        load_network_if_details_from_lines(trimmed_lines)
 
 
 def get_file_system_drives():
@@ -843,14 +836,13 @@ def get_file_system_drives():
                            stderr=subprocess.STDOUT)
     stdout, _ = out.communicate()
     lines = stdout.decode('utf-8').split("\n")
-    trimmedLines = []
-    for currLine in lines:
-        trimmedLine = currLine.lstrip().rstrip()
-        if len(trimmedLine) > 0:
-            trimmedLines.append(trimmedLine)
+    trimmed_lines = []
+    for curr_line in lines:
+        trimmed_line = curr_line.lstrip().rstrip()
+        if len(trimmed_line) > 0:
+            trimmed_lines.append(trimmed_line)
 
-    print_line('getFileSystemDrives() trimmedLines=[{}]'.format(
-        trimmedLines), debug=True)
+    print_line('getFileSystemDrives() trimmed_lines=[{}]'.format(trimmed_lines), debug=True)
 
     #  EXAMPLES
     #
@@ -882,17 +874,17 @@ def get_file_system_drives():
     #   '/dev/sda1         953868 882178     71690  93% /media/usb0',
     #   '/dev/sdb1         976761  93684    883078  10% /media/pi/SSD']]
 
-    tmpDrives = []
-    for currLine in trimmedLines:
-        if 'no such device' in currLine.lower():
-            print_line('BAD LINE FORMAT, Skipped=[{}]'.format(currLine), debug=True, warning=True)
+    tmp_drives = []
+    for curr_line in trimmed_lines:
+        if 'no such device' in curr_line.lower():
+            print_line('BAD LINE FORMAT, Skipped=[{}]'.format(curr_line), debug=True, warning=True)
             continue
-        lineParts = currLine.split()
-        print_line('lineParts({})=[{}]'.format(
-            len(lineParts), lineParts), debug=True)
-        if len(lineParts) < 6:
+        line_parts = curr_line.split()
+        print_line('line_parts({})=[{}]'.format(
+            len(line_parts), line_parts), debug=True)
+        if len(line_parts) < 6:
             print_line('BAD LINE FORMAT, Skipped=[{}]'.format(
-                lineParts), debug=True, warning=True)
+                line_parts), debug=True, warning=True)
             continue
         # tuple { total blocks, used%, mountPoint, device }
         #
@@ -905,8 +897,8 @@ def get_file_system_drives():
 
         # locate our % used field...
         percent_field_index = 0
-        for percent_field_index in range(len(lineParts) - 2, 1, -1):
-            if '%' in lineParts[percent_field_index]:
+        for percent_field_index in range(len(line_parts) - 2, 1, -1):
+            if '%' in line_parts[percent_field_index]:
                 break
         print_line('percent_field_index=[{}]'.format(percent_field_index), debug=True)
 
@@ -914,26 +906,26 @@ def get_file_system_drives():
         mount_idx = percent_field_index + 1
 
         # do we have a two part device name?
-        device = lineParts[0]
+        device = line_parts[0]
         if total_size_idx != 1:
-            device = '{} {}'.format(lineParts[0], lineParts[1])
+            device = '{} {}'.format(line_parts[0], line_parts[1])
         print_line('device=[{}]'.format(device), debug=True)
 
         # do we have a two part mount point?
-        mount_point = lineParts[mount_idx]
-        if len(lineParts) - 1 > mount_idx:
+        mount_point = line_parts[mount_idx]
+        if len(line_parts) - 1 > mount_idx:
             mount_point = '{} {}'.format(
-                lineParts[mount_idx], lineParts[mount_idx + 1])
+                line_parts[mount_idx], line_parts[mount_idx + 1])
         print_line('mount_point=[{}]'.format(mount_point), debug=True)
 
         total_size_in_gb = '{:.0f}'.format(
-            next_power_of_2(lineParts[total_size_idx]))
-        newTuple = (total_size_in_gb, lineParts[percent_field_index].replace(
+            next_power_of_2(line_parts[total_size_idx]))
+        newTuple = (total_size_in_gb, line_parts[percent_field_index].replace(
             '%', ''), mount_point, device)
-        tmpDrives.append(newTuple)
+        tmp_drives.append(newTuple)
         print_line('newTuple=[{}]'.format(newTuple), debug=True)
         if newTuple[2] == '/':
-            rpi_filesystem_space_raw = currLine
+            rpi_filesystem_space_raw = curr_line
             rpi_filesystem_space = newTuple[0]
             rpi_filesystem_percent = newTuple[1]
             print_line('rpi_filesystem_space=[{}GB]'.format(
@@ -941,7 +933,7 @@ def get_file_system_drives():
             print_line('rpi_filesystem_percent=[{}]'.format(
                 newTuple[1]), debug=True)
 
-    rpi_filesystem = tmpDrives
+    rpi_filesystem = tmp_drives
     print_line('rpi_filesystem=[{}]'.format(rpi_filesystem), debug=True)
 
 
@@ -953,55 +945,55 @@ def next_power_of_2(size):
 def get_vc_gen_cmd():
     cmd_locn1 = '/usr/bin/vcgencmd'
     cmd_locn2 = '/opt/vc/bin/vcgencmd'
-    desiredCommand = None
+    desired_command = None
     if os.path.exists(cmd_locn1):
-        desiredCommand = cmd_locn1
+        desired_command = cmd_locn1
     elif os.path.exists(cmd_locn2):
-        desiredCommand = cmd_locn2
+        desired_command = cmd_locn2
     else:
         print_line('ERROR: vcgencmd(8) not found!', error=True)
 
-    if desiredCommand:
-        print_line('Found vcgencmd(8)=[{}]'.format(desiredCommand), debug=True)
+    if desired_command:
+        print_line('Found vcgencmd(8)=[{}]'.format(desired_command), debug=True)
     else:
         pass  # ToDo: maybe exit?
-    return desiredCommand
+    return desired_command
 
 
 def get_shell_cmd():
     cmd_locn1 = '/usr/bin/sh'
     cmd_locn2 = '/bin/sh'
-    desiredCommand = None
+    desired_command = None
     if os.path.exists(cmd_locn1):
-        desiredCommand = cmd_locn1
+        desired_command = cmd_locn1
     elif os.path.exists(cmd_locn2):
-        desiredCommand = ''
+        desired_command = ''
     else:
         print_line('ERROR: sh(1) not found!', error=True)
 
-    if desiredCommand:
-        print_line('Found sh(1)=[{}]'.format(desiredCommand), debug=True)
+    if desired_command:
+        print_line('Found sh(1)=[{}]'.format(desired_command), debug=True)
     else:
         pass  # ToDo: maybe exit?
-    return desiredCommand
+    return desired_command
 
 
 def get_ip_cmd():
     cmd_locn1 = '/bin/ip'
     cmd_locn2 = '/sbin/ip'
-    desiredCommand = None
+    desired_command = None
     if os.path.exists(cmd_locn1):
-        desiredCommand = cmd_locn1
+        desired_command = cmd_locn1
     elif os.path.exists(cmd_locn2):
-        desiredCommand = cmd_locn2
+        desired_command = cmd_locn2
     else:
         print_line('ERROR: ip(8) not found!', error=True)
 
-    if desiredCommand:
-        print_line('Found ip(8)=[{}]'.format(desiredCommand), debug=True)
+    if desired_command:
+        print_line('Found ip(8)=[{}]'.format(desired_command), debug=True)
     else:
         pass  # ToDo: maybe exit?
-    return desiredCommand
+    return desired_command
 
 
 def get_system_temperature():
@@ -1091,11 +1083,11 @@ def get_system_thermal_status():
                 'bad response [{}] from vcgencmd'.format(rpi_throttle_status_raw))
         else:
             values = []
-            lineParts = rpi_throttle_status_raw.split('=')
-            print_line('lineParts=[{}]'.format(lineParts), debug=True)
+            line_parts = rpi_throttle_status_raw.split('=')
+            print_line('line_parts=[{}]'.format(line_parts), debug=True)
             rpi_throttle_value_raw = ''
-            if len(lineParts) > 1:
-                rpi_throttle_value_raw = lineParts[1]
+            if len(line_parts) > 1:
+                rpi_throttle_value_raw = line_parts[1]
             rpi_throttle_value = int(0)
             if len(rpi_throttle_value_raw) > 0:
                 values.append('throttled = {}'.format(rpi_throttle_value_raw))
@@ -1129,7 +1121,7 @@ def interpret_throttle_value(throttle_value):
     |_ Soft temperature limit has occurred
     """
     print_line('throttleValue=[{}]'.format(bin(throttle_value)), debug=True)
-    interpResult = []
+    interp_result = []
     meanings = [
         (2 ** 0, 'Under-voltage detected'),
         (2 ** 1, 'Arm frequency capped'),
@@ -1141,16 +1133,16 @@ def interpret_throttle_value(throttle_value):
         (2 ** 19, 'Soft temperature limit has occurred'),
     ]
 
-    for meaningIndex in range(len(meanings)):
-        bitTuple = meanings[meaningIndex]
-        if throttle_value & bitTuple[0] > 0:
-            interpResult.append(bitTuple[1])
+    for meaning_index in range(len(meanings)):
+        bit_tuple = meanings[meaning_index]
+        if throttle_value & bit_tuple[0] > 0:
+            interp_result.append(bit_tuple[1])
 
-    print_line('interpResult=[{}]'.format(interpResult), debug=True)
-    return interpResult
+    print_line('interp_result=[{}]'.format(interp_result), debug=True)
+    return interp_result
 
 
-def getLastUpdateDate():
+def get_last_update_date():
     global rpi_last_update_date
     # apt-get update writes to following dir (so date changes on update)
     apt_listdir_filespec = '/var/lib/apt/lists/partial'
@@ -1163,30 +1155,30 @@ def getLastUpdateDate():
                            stderr=subprocess.STDOUT)
     stdout, _ = out.communicate()
     lines = stdout.decode('utf-8').split("\n")
-    trimmedLines = []
-    for currLine in lines:
-        trimmedLine = currLine.lstrip().rstrip()
+    trimmed_lines = []
+    for curr_line in lines:
+        trimmedLine = curr_line.lstrip().rstrip()
         if len(trimmedLine) > 0:
-            trimmedLines.append(trimmedLine)
-    print_line('trimmedLines=[{}]'.format(trimmedLines), debug=True)
+            trimmed_lines.append(trimmedLine)
+    print_line('trimmedLines=[{}]'.format(trimmed_lines), debug=True)
 
-    fileSpec_latest = ''
-    if len(trimmedLines) > 0:
-        lastLineIdx = len(trimmedLines) - 1
-        lineParts = trimmedLines[lastLineIdx].split()
-        if len(lineParts) > 0:
-            lastPartIdx = len(lineParts) - 1
-            fileSpec_latest = lineParts[lastPartIdx]
-    print_line('fileSpec_latest=[{}]'.format(fileSpec_latest), debug=True)
+    file_spec_latest = ''
+    if len(trimmed_lines) > 0:
+        last_line_idx = len(trimmed_lines) - 1
+        line_parts = trimmed_lines[last_line_idx].split()
+        if len(line_parts) > 0:
+            lastPartIdx = len(line_parts) - 1
+            file_spec_latest = line_parts[lastPartIdx]
+    print_line('file_spec_latest=[{}]'.format(file_spec_latest), debug=True)
 
-    fileModDateInSeconds = os.path.getmtime(fileSpec_latest)
-    fileModDate = datetime.fromtimestamp(fileModDateInSeconds)
-    rpi_last_update_date = fileModDate.replace(tzinfo=local_tz)
+    file_mod_date_in_seconds = os.path.getmtime(file_spec_latest)
+    file_mod_date = datetime.fromtimestamp(file_mod_date_in_seconds)
+    rpi_last_update_date = file_mod_date.replace(tzinfo=local_tz)
     print_line('rpi_last_update_date=[{}]'.format(
         rpi_last_update_date), debug=True)
 
 
-def getLastInstallDate():
+def get_last_install_date():
     global rpi_last_update_date
     # apt_log_filespec = '/var/log/dpkg.log'
     # apt_log_filespec2 = '/var/log/dpkg.log.1'
@@ -1279,33 +1271,33 @@ def alive_timeout_handler():
 
 
 def start_alive_timer():
-    global aliveTimer
-    global aliveTimerRunningStatus
+    global alive_timer
+    global alive_timer_running_status
     stop_alive_timer()
-    aliveTimer = threading.Timer(K_ALIVE_TIMOUT_IN_SECONDS, alive_timeout_handler)
-    aliveTimer.start()
-    aliveTimerRunningStatus = True
+    alive_timer = threading.Timer(K_ALIVE_TIMOUT_IN_SECONDS, alive_timeout_handler)
+    alive_timer.start()
+    alive_timer_running_status = True
     print_line(
         '- started MQTT timer - every {} seconds'.format(K_ALIVE_TIMOUT_IN_SECONDS), debug=True)
 
 
 def stop_alive_timer():
-    global aliveTimer
-    global aliveTimerRunningStatus
-    aliveTimer.cancel()
-    aliveTimerRunningStatus = False
+    global alive_timer
+    global alive_timer_running_status
+    alive_timer.cancel()
+    alive_timer_running_status = False
     print_line('- stopped MQTT timer', debug=True)
 
 
 def is_alive_timer_running():
-    global aliveTimerRunningStatus
-    return aliveTimerRunningStatus
+    global alive_timer_running_status
+    return alive_timer_running_status
 
 
 # our ALIVE TIMER
-aliveTimer = threading.Timer(K_ALIVE_TIMOUT_IN_SECONDS, alive_timeout_handler)
+alive_timer = threading.Timer(K_ALIVE_TIMOUT_IN_SECONDS, alive_timeout_handler)
 # our BOOL tracking state of ALIVE TIMER
-aliveTimerRunningStatus = False
+alive_timer_running_status = False
 
 # -----------------------------------------------------------------------------
 #  MQTT setup and startup
@@ -1381,7 +1373,7 @@ mac_left = mac_basic[:6]
 mac_right = mac_basic[6:]
 print_line('mac lt=[{}], rt=[{}], mac=[{}]'.format(
     mac_left, mac_right, mac_basic), debug=True)
-uniqID = "RPi-{}Mon{}".format(mac_left, mac_right)
+uniq_id = "RPi-{}Mon{}".format(mac_left, mac_right)
 
 # our RPi Reporter device
 # KeyError: 'home310/sensor/rpi-pi3plus/values' let's not use this 'values' as topic
@@ -1414,7 +1406,7 @@ print_line('Announcing RPi Monitoring device to MQTT broker for auto-discovery .
 
 # Publish our MQTT auto discovery
 #  table of key items to publish:
-detectorValues = OrderedDict([
+detector_values = OrderedDict([
     (K_LD_MONITOR, dict(
         title="RPi Monitor {}".format(rpi_hostname),
         topic_category="sensor",
@@ -1469,7 +1461,7 @@ for [command, _] in commands.items():
         iconName = 'mdi:power-sleep'
     elif 'service' in command:
         iconName = 'mdi:cog-counterclockwise'
-    detectorValues.update({
+    detector_values.update({
         command: dict(
             title='RPi {} {} Command'.format(command, rpi_hostname),
             topic_category='button',
@@ -1491,7 +1483,7 @@ activity_topic = '{}/status'.format(sensor_base_topic)  # vs. LWT
 command_topic_rel = '~/set'
 
 # discovery_topic = '{}/sensor/{}/{}/config'.format(discovery_prefix, sensor_name.lower(), sensor)
-for [sensor, params] in detectorValues.items():
+for [sensor, params] in detector_values.items():
     discovery_topic = '{}/{}/{}/{}/config'.format(discovery_prefix, params['topic_category'], sensor_name.lower(),
                                                   sensor)
     payload = OrderedDict()
@@ -1500,7 +1492,7 @@ for [sensor, params] in detectorValues.items():
     else:
         payload['name'] = "{} {}".format(
             sensor_name.title(), params['title'].title())
-    payload['uniq_id'] = "{}_{}".format(uniqID, sensor.lower())
+    payload['uniq_id'] = "{}_{}".format(uniq_id, sensor.lower())
     if 'device_class' in params:
         payload['dev_cla'] = params['device_class']
     if 'unit' in params:
@@ -1528,7 +1520,7 @@ for [sensor, params] in detectorValues.items():
         payload['json_attr_tpl'] = '{{{{ value_json.{} | tojson }}}}'.format(K_LD_PAYLOAD_NAME)
     if 'device_ident' in params:
         payload['dev'] = {
-            'identifiers': ["{}".format(uniqID)],
+            'identifiers': ["{}".format(uniq_id)],
             'manufacturer': 'Raspberry Pi (Trading) Ltd.',
             'name': params['device_ident'],
             'model': '{}'.format(rpi_model),
@@ -1536,7 +1528,7 @@ for [sensor, params] in detectorValues.items():
         }
     else:
         payload['dev'] = {
-            'identifiers': ["{}".format(uniqID)],
+            'identifiers': ["{}".format(uniq_id)],
         }
     mqtt_client.publish(discovery_topic, json.dumps(payload), 1, retain=True)
 
@@ -1557,35 +1549,34 @@ def period_timeout_handler():
 
 
 def start_period_timer():
-    global endPeriodTimer
-    global periodTimeRunningStatus
+    global end_period_timer
+    global period_time_running_status
     stop_period_timer()
-    endPeriodTimer = threading.Timer(
+    end_period_timer = threading.Timer(
         interval_in_minutes * 60.0, period_timeout_handler)
-    endPeriodTimer.start()
-    periodTimeRunningStatus = True
-    print_line(
-        '- started PERIOD timer - every {} seconds'.format(interval_in_minutes * 60.0), debug=True)
+    end_period_timer.start()
+    period_time_running_status = True
+    print_line('- started PERIOD timer - every {} seconds'.format(interval_in_minutes * 60.0), debug=True)
 
 
 def stop_period_timer():
-    global endPeriodTimer
-    global periodTimeRunningStatus
-    endPeriodTimer.cancel()
-    periodTimeRunningStatus = False
+    global end_period_timer
+    global period_time_running_status
+    end_period_timer.cancel()
+    period_time_running_status = False
     print_line('- stopped PERIOD timer', debug=True)
 
 
 def is_period_timer_running():
-    global periodTimeRunningStatus
-    return periodTimeRunningStatus
+    global period_time_running_status
+    return period_time_running_status
 
 
 # our TIMER
-endPeriodTimer = threading.Timer(
+end_period_timer = threading.Timer(
     interval_in_minutes * 60.0, period_timeout_handler)
 # our BOOL tracking state of TIMER
-periodTimeRunningStatus = False
+period_time_running_status = False
 reported_first_time = False
 
 # -----------------------------------------------------------------------------
@@ -1645,108 +1636,108 @@ K_RPI_THROTTLE = "throttle"
 
 
 def send_status(timestamp, _):
-    rpiData = OrderedDict()
-    rpiData[SCRIPT_TIMESTAMP] = timestamp.astimezone().replace(microsecond=0).isoformat()
-    rpiData[K_RPI_MODEL] = rpi_model
-    rpiData[K_RPI_CONNECTIONS] = rpi_connections
-    rpiData[K_RPI_HOSTNAME] = rpi_hostname
-    rpiData[K_RPI_FQDN] = rpi_fqdn
-    rpiData[K_RPI_LINUX_RELEASE] = rpi_linux_release
-    rpiData[K_RPI_LINUX_VERSION] = rpi_linux_version
-    rpiData[K_RPI_LINUX_AVAIL_UPD] = rpi_update_count
-    rpiData[K_RPI_UPTIME] = rpi_uptime
-    rpiData[K_RPI_UPTIME_SECONDS] = rpi_uptime_sec
+    rpi_data = OrderedDict()
+    rpi_data[SCRIPT_TIMESTAMP] = timestamp.astimezone().replace(microsecond=0).isoformat()
+    rpi_data[K_RPI_MODEL] = rpi_model
+    rpi_data[K_RPI_CONNECTIONS] = rpi_connections
+    rpi_data[K_RPI_HOSTNAME] = rpi_hostname
+    rpi_data[K_RPI_FQDN] = rpi_fqdn
+    rpi_data[K_RPI_LINUX_RELEASE] = rpi_linux_release
+    rpi_data[K_RPI_LINUX_VERSION] = rpi_linux_version
+    rpi_data[K_RPI_LINUX_AVAIL_UPD] = rpi_update_count
+    rpi_data[K_RPI_UPTIME] = rpi_uptime
+    rpi_data[K_RPI_UPTIME_SECONDS] = rpi_uptime_sec
 
     #  DON'T use V1 form of getting date (my dashbord mech)
     # actualDate = datetime.strptime(rpi_last_update_date, '%y%m%d%H%M%S')
     # actualDate.replace(tzinfo=local_tz)
-    # rpiData[K_RPI_DATE_LAST_UPDATE] = actualDate.astimezone().replace(microsecond=0).isoformat()
+    # rpi_data[K_RPI_DATE_LAST_UPDATE] = actualDate.astimezone().replace(microsecond=0).isoformat()
     # also don't use V2 form...
     # if rpi_last_update_date_v2 != datetime.min:
-    #    rpiData[K_RPI_DATE_LAST_UPDATE] = rpi_last_update_date_v2.astimezone().replace(microsecond=0).isoformat()
+    #    rpi_data[K_RPI_DATE_LAST_UPDATE] = rpi_last_update_date_v2.astimezone().replace(microsecond=0).isoformat()
     # else:
-    #    rpiData[K_RPI_DATE_LAST_UPDATE] = ''
+    #    rpi_data[K_RPI_DATE_LAST_UPDATE] = ''
     if rpi_last_update_date != datetime.min:
-        rpiData[K_RPI_DATE_LAST_UPDATE] = rpi_last_update_date.astimezone().replace(
+        rpi_data[K_RPI_DATE_LAST_UPDATE] = rpi_last_update_date.astimezone().replace(
             microsecond=0).isoformat()
     else:
-        rpiData[K_RPI_DATE_LAST_UPDATE] = ''
-    rpiData[K_RPI_FS_SPACE] = int(rpi_filesystem_space.replace('GB', ''), 10)
+        rpi_data[K_RPI_DATE_LAST_UPDATE] = ''
+    rpi_data[K_RPI_FS_SPACE] = int(rpi_filesystem_space.replace('GB', ''), 10)
     # TODO: consider eliminating K_RPI_FS_AVAIL/fs_free_prcnt as used is needed but free is not... (can be calculated)
-    rpiData[K_RPI_FS_AVAIL] = 100 - int(rpi_filesystem_percent, 10)
-    rpiData[K_RPI_FS_USED] = int(rpi_filesystem_percent, 10)
+    rpi_data[K_RPI_FS_AVAIL] = 100 - int(rpi_filesystem_percent, 10)
+    rpi_data[K_RPI_FS_USED] = int(rpi_filesystem_percent, 10)
 
-    rpiData[K_RPI_NETWORK] = get_network_dictionary()
+    rpi_data[K_RPI_NETWORK] = get_network_dictionary()
 
-    rpiDrives = get_drives_dictionary()
-    if len(rpiDrives) > 0:
-        rpiData[K_RPI_DRIVES] = rpiDrives
+    rpi_drives = get_drives_dictionary()
+    if len(rpi_drives) > 0:
+        rpi_data[K_RPI_DRIVES] = rpi_drives
 
-    rpiRam = get_memory_dictionary()
-    if len(rpiRam) > 0:
-        rpiData[K_RPI_MEMORY] = rpiRam
+    rpi_ram = get_memory_dictionary()
+    if len(rpi_ram) > 0:
+        rpi_data[K_RPI_MEMORY] = rpi_ram
         ramSizeMB = int('{:.0f}'.format(rpi_memory_tuple[0], 10))  # "mem_space_mbytes"
         # used is total - free
         ramUsedMB = int('{:.0f}'.format(rpi_memory_tuple[0] - rpi_memory_tuple[2]), 10)
         ramUsedPercent = int((ramUsedMB / ramSizeMB) * 100)
-        rpiData[K_RPI_RAM_USED] = ramUsedPercent  # "mem_used_prcnt"
+        rpi_data[K_RPI_RAM_USED] = ramUsedPercent  # "mem_used_prcnt"
 
     rpiCpu = get_cpu_dictionary()
     if len(rpiCpu) > 0:
-        rpiData[K_RPI_CPU] = rpiCpu
+        rpi_data[K_RPI_CPU] = rpiCpu
 
     if len(rpi_throttle_status) > 0:
-        rpiData[K_RPI_THROTTLE] = rpi_throttle_status
+        rpi_data[K_RPI_THROTTLE] = rpi_throttle_status
 
-    rpiData[K_RPI_SYSTEM_TEMP] = force_single_digit(rpi_system_temp)
-    rpiData[K_RPI_GPU_TEMP] = force_single_digit(rpi_gpu_temp)
-    rpiData[K_RPI_CPU_TEMP] = force_single_digit(rpi_cpu_temp)
+    rpi_data[K_RPI_SYSTEM_TEMP] = force_single_digit(rpi_system_temp)
+    rpi_data[K_RPI_GPU_TEMP] = force_single_digit(rpi_gpu_temp)
+    rpi_data[K_RPI_CPU_TEMP] = force_single_digit(rpi_cpu_temp)
 
-    rpiData[K_RPI_SCRIPT] = rpi_mqtt_script.replace('.py', '')
-    rpiData[K_RPI_SCRIPT_VERSIONS] = ','.join(daemon_version_list)
-    rpiData[SCRIPT_REPORT_INTERVAL] = interval_in_minutes
+    rpi_data[K_RPI_SCRIPT] = rpi_mqtt_script.replace('.py', '')
+    rpi_data[K_RPI_SCRIPT_VERSIONS] = ','.join(daemon_version_list)
+    rpi_data[SCRIPT_REPORT_INTERVAL] = interval_in_minutes
 
     rpiTopDict = OrderedDict()
-    rpiTopDict[K_LD_PAYLOAD_NAME] = rpiData
+    rpiTopDict[K_LD_PAYLOAD_NAME] = rpi_data
 
     _thread.start_new_thread(publish_monitor_data, (rpiTopDict, values_topic))
 
 
 def force_single_digit(temperature):
-    tempInterp = '{:.1f}'.format(temperature)
-    return float(tempInterp)
+    temp_interp = '{:.1f}'.format(temperature)
+    return float(temp_interp)
 
 
 def get_drives_dictionary():
     global rpi_filesystem
-    rpiDrives = OrderedDict()
+    rpi_drives = OrderedDict()
 
     # tuple { total blocks, used%, mountPoint, device }
-    for driveTuple in rpi_filesystem:
-        rpiSingleDrive = OrderedDict()
-        rpiSingleDrive[K_RPI_DRV_BLOCKS] = int(driveTuple[0])
-        rpiSingleDrive[K_RPI_DRV_USED] = int(driveTuple[1])
-        device = driveTuple[3]
+    for drive_tuple in rpi_filesystem:
+        rpi_single_drive = OrderedDict()
+        rpi_single_drive[K_RPI_DRV_BLOCKS] = int(drive_tuple[0])
+        rpi_single_drive[K_RPI_DRV_USED] = int(drive_tuple[1])
+        device = drive_tuple[3]
         if ':' in device:
-            rpiDevice = OrderedDict()
-            lineParts = device.split(':')
-            rpiDevice[K_RPI_DVC_IP] = lineParts[0]
-            rpiDevice[K_RPI_DVC_PATH] = lineParts[1]
-            rpiSingleDrive[K_RPI_DRV_NFS] = rpiDevice
+            rpi_device = OrderedDict()
+            line_parts = device.split(':')
+            rpi_device[K_RPI_DVC_IP] = line_parts[0]
+            rpi_device[K_RPI_DVC_PATH] = line_parts[1]
+            rpi_single_drive[K_RPI_DRV_NFS] = rpi_device
         else:
-            rpiSingleDrive[K_RPI_DRV_DEVICE] = device
+            rpi_single_drive[K_RPI_DRV_DEVICE] = device
             # rpiTest = OrderedDict()
             # rpiTest[K_RPI_DVC_IP] = '255.255.255.255'
             # rpiTest[K_RPI_DVC_PATH] = '/srv/c2db7b94'
-            # rpiSingleDrive[K_RPI_DRV_NFS] = rpiTest
-        rpiSingleDrive[K_RPI_DRV_MOUNT] = driveTuple[2]
-        driveKey = driveTuple[2].replace('/', '-').replace('-', '', 1)
-        if len(driveKey) == 0:
-            driveKey = "root"
-        rpiDrives[driveKey] = rpiSingleDrive
+            # rpi_single_drive[K_RPI_DRV_NFS] = rpiTest
+        rpi_single_drive[K_RPI_DRV_MOUNT] = drive_tuple[2]
+        drive_key = drive_tuple[2].replace('/', '-').replace('-', '', 1)
+        if len(drive_key) == 0:
+            drive_key = "root"
+        rpi_drives[drive_key] = rpi_single_drive
 
         # TEST NFS
-    return rpiDrives
+    return rpi_drives
 
 
 def get_network_dictionary():
@@ -1757,58 +1748,58 @@ def get_network_dictionary():
     #   ('wlan0', 'IP', '192.168.100.189'),
     #   ('wlan0', 'mac', 'b8:27:eb:4f:a6:e9')
     # ]]
-    networkData = OrderedDict()
+    network_data = OrderedDict()
 
-    priorIFKey = ''
-    tmpData = OrderedDict()
+    prior_if_key = ''
+    tmp_data = OrderedDict()
     for currTuple in rpi_interfaces:
-        currIFKey = currTuple[0]
-        if priorIFKey == '':
-            priorIFKey = currIFKey
-        if currIFKey != priorIFKey:
+        curr_if_key = currTuple[0]
+        if prior_if_key == '':
+            prior_if_key = curr_if_key
+        if curr_if_key != prior_if_key:
             # save off prior if exists
-            if priorIFKey != '':
-                networkData[priorIFKey] = tmpData
-                tmpData = OrderedDict()
-                priorIFKey = currIFKey
-        subKey = currTuple[1]
-        subValue = currTuple[2]
-        tmpData[subKey] = subValue
-    networkData[priorIFKey] = tmpData
-    print_line('networkData:{}"'.format(networkData), debug=True)
-    return networkData
+            if prior_if_key != '':
+                network_data[prior_if_key] = tmp_data
+                tmp_data = OrderedDict()
+                prior_if_key = curr_if_key
+        sub_key = currTuple[1]
+        sub_value = currTuple[2]
+        tmp_data[sub_key] = sub_value
+    network_data[prior_if_key] = tmp_data
+    print_line('network_data:{}"'.format(network_data), debug=True)
+    return network_data
 
 
 def get_memory_dictionary():
     # TYPICAL:
     #   Tuple (Total, Free, Avail.)
-    memoryData = OrderedDict()
+    memory_data = OrderedDict()
     if rpi_memory_tuple != '':
         # TODO: remove free fr
-        memoryData[K_RPI_MEM_TOTAL] = round(rpi_memory_tuple[0])
-        memoryData[K_RPI_MEM_FREE] = round(rpi_memory_tuple[2])
-        memoryData[K_RPI_SWAP_TOTAL] = round(rpi_memory_tuple[3])
-        memoryData[K_RPI_SWAP_FREE] = round(rpi_memory_tuple[4])
-    # print_line('memoryData:{}"'.format(memoryData), debug=True)
-    return memoryData
+        memory_data[K_RPI_MEM_TOTAL] = round(rpi_memory_tuple[0])
+        memory_data[K_RPI_MEM_FREE] = round(rpi_memory_tuple[2])
+        memory_data[K_RPI_SWAP_TOTAL] = round(rpi_memory_tuple[3])
+        memory_data[K_RPI_SWAP_FREE] = round(rpi_memory_tuple[4])
+    # print_line('memory_data:{}"'.format(memory_data), debug=True)
+    return memory_data
 
 
 def get_cpu_dictionary():
     # TYPICAL:
     #   Tuple (Hardware, Model Name, NbrCores, BogoMIPS, Serial)
-    cpuDict = OrderedDict()
+    cpu_dict = OrderedDict()
     # print_line('rpi_cpu_tuple:{}"'.format(rpi_cpu_tuple), debug=True)
     if rpi_cpu_tuple != '':
-        cpuDict[K_RPI_CPU_HARDWARE] = rpi_cpu_tuple[0]
-        cpuDict[K_RPI_CPU_MODEL] = rpi_cpu_tuple[1]
-        cpuDict[K_RPI_CPU_CORES] = rpi_cpu_tuple[2]
-        cpuDict[K_RPI_CPU_BOGOMIPS] = '{:.2f}'.format(rpi_cpu_tuple[3])
-        cpuDict[K_RPI_CPU_SERIAL] = rpi_cpu_tuple[4]
-        cpuDict[K_RPI_CPU_LOAD1] = rpi_cpu_tuple[5]
-        cpuDict[K_RPI_CPU_LOAD5] = rpi_cpu_tuple[6]
-        cpuDict[K_RPI_CPU_LOAD15] = rpi_cpu_tuple[7]
-    print_line('cpuDict:{}"'.format(cpuDict), debug=True)
-    return cpuDict
+        cpu_dict[K_RPI_CPU_HARDWARE] = rpi_cpu_tuple[0]
+        cpu_dict[K_RPI_CPU_MODEL] = rpi_cpu_tuple[1]
+        cpu_dict[K_RPI_CPU_CORES] = rpi_cpu_tuple[2]
+        cpu_dict[K_RPI_CPU_BOGOMIPS] = '{:.2f}'.format(rpi_cpu_tuple[3])
+        cpu_dict[K_RPI_CPU_SERIAL] = rpi_cpu_tuple[4]
+        cpu_dict[K_RPI_CPU_LOAD1] = rpi_cpu_tuple[5]
+        cpu_dict[K_RPI_CPU_LOAD5] = rpi_cpu_tuple[6]
+        cpu_dict[K_RPI_CPU_LOAD15] = rpi_cpu_tuple[7]
+    print_line('cpu_dict:{}"'.format(cpu_dict), debug=True)
+    return cpu_dict
 
 
 def publish_monitor_data(latest_data, topic):
@@ -1826,7 +1817,7 @@ def update_values():
     get_file_system_drives()
     get_system_temperature()
     get_system_thermal_status()
-    getLastUpdateDate()
+    get_last_update_date()
     get_device_memory()
     get_network_ifs()
 
@@ -1838,9 +1829,9 @@ def update_values():
 
 def handle_interrupt(channel):
     global reported_first_time
-    sourceID = "<< INTR(" + str(channel) + ")"
+    source_id = "<< INTR(" + str(channel) + ")"
     current_timestamp = datetime.now(local_tz)
-    print_line(sourceID + " >> Time to report! (%s)" %
+    print_line(source_id + " >> Time to report! (%s)" %
                current_timestamp.strftime('%H:%M:%S - %Y/%m/%d'), verbose=True)
     # ----------------------------------
     # have PERIOD interrupt!
@@ -1851,7 +1842,7 @@ def handle_interrupt(channel):
         _thread.start_new_thread(send_status, (current_timestamp, ''))
         reported_first_time = True
     else:
-        print_line(sourceID + " >> Time to report! (%s) but SKIPPED (TEST: stall)" %
+        print_line(source_id + " >> Time to report! (%s) but SKIPPED (TEST: stall)" %
                    current_timestamp.strftime('%H:%M:%S - %Y/%m/%d'), verbose=True)
 
 
@@ -1865,11 +1856,11 @@ def after_mqtt_connect():
 
 
 # TESTING AGAIN
-# getNetworkIFs()
-# getLastUpdateDate()
-
+# get_network_ifs()
+# get_last_update_date()
+#
 # TESTING, early abort
-# stopAliveTimer()
+# stop_alive_timer()
 # exit(0)
 
 
@@ -1877,9 +1868,9 @@ def main():
     after_mqtt_connect()  # now instead of after?
 
     # check every 12 hours (twice a day) = 12 hours * 60 minutes * 60 seconds
-    kVersionCheckIntervalInSeconds = (12 * 60 * 60)
+    k_version_check_interval_in_seconds = (12 * 60 * 60)
     # check every 4 hours (6 times a day) = 4 hours * 60 minutes * 60 seconds
-    kUpdateCheckIntervalInSeconds = (check_interval_in_hours * 60 * 60)
+    k_update_check_interval_in_seconds = (check_interval_in_hours * 60 * 60)
 
     # now just hang in forever loop until script is stopped externally
     try:
@@ -1887,12 +1878,12 @@ def main():
             #  our INTERVAL timer does the work
             sleep(10000)
 
-            timeNow = time()
-            if timeNow > daemon_last_fetch_time + kVersionCheckIntervalInSeconds:
+            time_now = time()
+            if time_now > daemon_last_fetch_time + k_version_check_interval_in_seconds:
                 get_daemon_releases()  # and load them!
 
             if apt_available:
-                if timeNow > update_last_fetch_time + kUpdateCheckIntervalInSeconds:
+                if time_now > update_last_fetch_time + k_update_check_interval_in_seconds:
                     get_number_of_available_updates()  # and count them!
 
     finally:
