@@ -138,19 +138,20 @@ def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print_line('* MQTT connection established', console=True, sd_notify=True)
         print_line('')  # blank line?!
-        # _thread.start_new_thread(afterMQTTConnect, ())
+
         # threading.Thread(target=afterMQTTConnect).start()
+
         mqtt_client_connected = True
         print_line('on_connect() mqtt_client_connected=[{}]'.format(mqtt_client_connected), debug=True)
 
         # -------------------------------------------------------------------------
         # Commands Subscription
+        # -------------------------------------------------------------------------
         if len(commands) > 0:
             print_line('MQTT subscription to {}/+ enabled'.format(command_base_topic), console=True, sd_notify=True)
             mqtt_client.subscribe('{}/+'.format(command_base_topic))
         else:
             print_line('MQTT subscription to {}/+ disabled'.format(command_base_topic), console=True, sd_notify=True)
-        # -------------------------------------------------------------------------
 
     else:
         print_line('! Connection error with result code {} - {}'.format(str(rc),
@@ -1806,6 +1807,7 @@ def update_values():
     get_last_update_date()
     get_device_memory()
     get_network_ifs()
+
 
 # -----------------------------------------------------------------------------
 # Interrupt handler
