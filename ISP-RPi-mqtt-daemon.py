@@ -216,6 +216,7 @@ def on_message(client, userdata, message):
 
 # -----------------------------------------------------------------------------
 # Load configuration file
+# -----------------------------------------------------------------------------
 config = ConfigParser(delimiters=('=',), inline_comment_prefixes='#', interpolation=None)
 config.optionxform = str
 try:
@@ -390,8 +391,7 @@ previous_time = time()
 
 # -----------------------------------------------------------------------------
 #  monitor variable fetch routines
-#
-
+# -----------------------------------------------------------------------------
 
 def get_device_cpu_info():
     global rpi_cpu_tuple
@@ -1807,10 +1807,9 @@ def update_values():
     get_device_memory()
     get_network_ifs()
 
-
 # -----------------------------------------------------------------------------
-
 # Interrupt handler
+# -----------------------------------------------------------------------------
 
 
 def handle_interrupt(channel):
@@ -1850,37 +1849,31 @@ def after_mqtt_connect():
 # stop_alive_timer()
 # exit(0)
 
+after_mqtt_connect()  # now instead of after?
 
-def main():
-    after_mqtt_connect()  # now instead of after?
+# check every 12 hours (twice a day) = 12 hours * 60 minutes * 60 seconds
+k_version_check_interval_in_seconds = (12 * 60 * 60)
+# check every 4 hours (6 times a day) = 4 hours * 60 minutes * 60 seconds
+k_update_check_interval_in_seconds = (check_interval_in_hours * 60 * 60)
 
-    # check every 12 hours (twice a day) = 12 hours * 60 minutes * 60 seconds
-    k_version_check_interval_in_seconds = (12 * 60 * 60)
-    # check every 4 hours (6 times a day) = 4 hours * 60 minutes * 60 seconds
-    k_update_check_interval_in_seconds = (check_interval_in_hours * 60 * 60)
+# now just hang in forever loop until script is stopped externally
+try:
+    while True:
+        #  our INTERVAL timer does the work
+        sleep(10000)
 
-    # now just hang in forever loop until script is stopped externally
-    try:
-        while True:
-            #  our INTERVAL timer does the work
-            sleep(10000)
+        time_now = time()
+        if time_now > daemon_last_fetch_time + k_version_check_interval_in_seconds:
+            get_daemon_releases()  # and load them!
 
-            time_now = time()
-            if time_now > daemon_last_fetch_time + k_version_check_interval_in_seconds:
-                get_daemon_releases()  # and load them!
+        if apt_available:
+            if time_now > update_last_fetch_time + k_update_check_interval_in_seconds:
+                get_number_of_available_updates()  # and count them!
 
-            if apt_available:
-                if time_now > update_last_fetch_time + k_update_check_interval_in_seconds:
-                    get_number_of_available_updates()  # and count them!
-
-    finally:
-        # cleanup used pins... just because we like cleaning up after us
-        publish_shutting_down_status()
-        stop_period_timer()  # don't leave our timers running!
-        stop_alive_timer()
-        mqtt_client.disconnect()
-        print_line('* MQTT Disconnect()', verbose=True)
-
-
-if __name__ == '__main__':
-    main()
+finally:
+    # cleanup used pins... just because we like cleaning up after us
+    publish_shutting_down_status()
+    stop_period_timer()  # don't leave our timers running!
+    stop_alive_timer()
+    mqtt_client.disconnect()
+    print_line('* MQTT Disconnect()', verbose=True)
