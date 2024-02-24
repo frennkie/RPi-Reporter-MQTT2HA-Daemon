@@ -1298,11 +1298,12 @@ lwt_command_topic = '{}/command/{}/status'.format(base_topic, sensor_name.lower(
 lwt_online_val = 'online'
 lwt_offline_val = 'offline'
 
+print_line('Connecting to MQTT broker ...', verbose=True)
+# ensure backward compatibility with older versions of paho-mqtt (<=2.0.0)
+# ToDo: Need to update to VERSION2 at some point
 try:
-    print_line('Connecting to MQTT broker ...', verbose=True)
     mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
-except TypeError:
-    # paho-mqtt <= 2.0 did not have the callback_api_version parameter
+except AttributeError:
     mqtt_client = mqtt.Client()
 
 # hook up MQTT callbacks
