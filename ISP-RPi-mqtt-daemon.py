@@ -1298,8 +1298,13 @@ lwt_command_topic = '{}/command/{}/status'.format(base_topic, sensor_name.lower(
 lwt_online_val = 'online'
 lwt_offline_val = 'offline'
 
-print_line('Connecting to MQTT broker ...', verbose=True)
-mqtt_client = mqtt.Client()
+try:
+    print_line('Connecting to MQTT broker ...', verbose=True)
+    mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+except TypeError:
+    # paho-mqtt <= 2.0 did not have the callback_api_version parameter
+    mqtt_client = mqtt.Client()
+
 # hook up MQTT callbacks
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect
