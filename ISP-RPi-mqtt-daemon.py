@@ -1216,10 +1216,22 @@ def get_number_of_available_updates():
         update_last_fetch_time = time()
 
 
+<<<<<<< HEAD
 # get our hostnames so we can set up MQTT
 get_hostnames()
 if sensor_name == default_sensor_name:
     sensor_name = 'rpi-{}'.format(rpi_hostname)
+||||||| parent of c86fa10 (Always update sensor_name after resolving hostname)
+# get our hostnames so we can setup MQTT
+getHostnames()
+if(sensor_name == default_sensor_name):
+    sensor_name = 'rpi-{}'.format(rpi_hostname)
+=======
+# get our hostnames so we can setup MQTT
+getHostnames()
+sensor_name = 'rpi-{}'.format(rpi_hostname)
+
+>>>>>>> c86fa10 (Always update sensor_name after resolving hostname)
 # get model so we can use it too in MQTT
 get_device_model()
 get_device_cpu_info()
