@@ -33,7 +33,7 @@ if sys.version_info[0] < 3:
     sys.stderr.write('Sorry, this script requires a python3 runtime environment.')
     sys.exit(1)
 
-script_version = "1.8.5"
+script_version = "1.9.x.fork"
 script_name = 'ISP-RPi-mqtt-daemon.py'
 script_info = '{} v{}'.format(script_name, script_version)
 project_name = 'RPi Reporter MQTT2HA Daemon'
