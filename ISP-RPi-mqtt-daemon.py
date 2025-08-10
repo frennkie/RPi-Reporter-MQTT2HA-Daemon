@@ -209,8 +209,8 @@ def on_message(client, userdata, message):
                        console=True, debug=True)
             pHandle = subprocess.Popen([shell_cmd_fspec, "-c", commands[_command].format(decoded_payload)])
             output, errors = pHandle.communicate()
-            if errors:
-                print_line('- Command exec says: errors=[{}]'.format(errors), console=True, debug=True)
+            if errors or pHandle.returncode:
+                print_line('- Command exec says: errors=[{}]'.format(errors or output), console=True, debug=True)
         else:
             print_line('* Invalid Command received.', error=True)
 
@@ -310,11 +310,16 @@ def get_daemon_releases():
     new_version_list = []
     latestVersion = ''
 
-    response = requests.request('GET', 'http://kz0q.com/daemon-releases', verify=False)
-    if response.status_code != 200:
-        print_line('- get_daemon_releases() RQST status=({})'.format(response.status_code), error=True)
-        daemon_version_list = ['NOT-LOADED']  # mark as NOT fetched
-    else:
+    daemon_version_list = [ 'NOT-LOADED' ]  # mark as NOT fetched
+    error = False
+    try:
+        response = requests.request('GET', 'http://kz0q.com/daemon-releases', verify=False, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as exc:
+        print_line('- getDaemonReleases() RQST exception=({})'.format(exc), error=True)
+        error = True
+
+    if not error:
         content = response.text
         lines = content.split('\n')
         for line in lines:
@@ -344,6 +349,24 @@ def get_daemon_releases():
 
 get_daemon_releases()  # and load them!
 print_line('* daemon_last_fetch_time=({})'.format(daemon_last_fetch_time), debug=True)
+
+# -----------------------------------------------------------------------------
+#  Command invocation thru shell
+def invoke_shell_cmd(cmd):
+    # Setting `pipefail` prior to command ensures the command will exit with
+    # non-zero status if any command in pipe (if any) fails.
+    # Using `Popen` with `args` being list setting such shell option there
+    # doesn't work for some shells, presumably due to argument processing
+    # order, so invoking shell needs to be specified explicitly with the option
+    # follows.
+    out = subprocess.Popen(['bash', '-o', 'pipefail', '-c', cmd],
+                           shell=False,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT)
+    stdout, stderr = out.communicate()
+
+    return stdout, stderr, out.returncode
+
 
 # -----------------------------------------------------------------------------
 #  RPi variables monitored
@@ -420,51 +443,46 @@ def get_device_cpu_info():
     #  Hardware	: BCM2835
     #  Serial		: 00000000131030c0
     #  Model		: Raspberry Pi Zero W Rev 1.1
-    cmd_string = '/bin/cat /proc/cpuinfo | /bin/egrep -i "processor|model|bogo|hardware|serial"'
-    out = subprocess.Popen(cmd_string,
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    lines = stdout.decode('utf-8').split("\n")
+    stdout, _, returncode = invoke_shell_cmd("cat /proc/cpuinfo | /bin/egrep -i 'processor|model|bogo|hardware|serial'")
+    lines = []
+    if not returncode:
+        lines = stdout.decode('utf-8').split("\n")
     trimmed_lines = []
     for curr_line in lines:
         trimmed_line = curr_line.lstrip().rstrip()
         trimmed_lines.append(trimmed_line)
-    cpu_hardware = ''  # 'hardware'
-    cpu_cores = 0  # count of 'processor' lines
-    _cpu_model = ''  # 'model name'
+    cpu_hardware = ''   # 'hardware'
+    cpu_cores = 0       # count of 'processor' lines
+    cpu_model = ''      # 'model name'
     cpu_bogoMIPS = 0.0  # sum of 'BogoMIPS' lines
     cpu_serial = ''  # 'serial'
     for curr_line in trimmed_lines:
-        lineParts = curr_line.split(':')
-        currValue = '{?unk?}'
-        if len(lineParts) >= 2:
-            currValue = lineParts[1].lstrip().rstrip()
+        line_parts = curr_line.split(':')
+        curr_value = '{?unk?}'
+        if len(line_parts) >= 2:
+            curr_value = line_parts[1].lstrip().rstrip()
         if 'Hardware' in curr_line:
-            cpu_hardware = currValue
+            cpu_hardware = curr_value
         if 'model name' in curr_line:
-            _cpu_model = currValue
+            cpu_model = curr_value
         if 'BogoMIPS' in curr_line:
-            cpu_bogoMIPS += float(currValue)
+            cpu_bogoMIPS += float(curr_value)
         if 'processor' in curr_line:
             cpu_cores += 1
         if 'Serial' in curr_line:
-            cpu_serial = currValue
+            cpu_serial = curr_value
 
-    out = subprocess.Popen("/bin/cat /proc/loadavg",
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    cpu_loads_raw = stdout.decode('utf-8').split()
+    stdout, _, returncode = invoke_shell_cmd('/bin/cat /proc/loadavg')
+    cpu_loads_raw = [-1.0] * 3
+    if not returncode:
+        cpu_loads_raw = stdout.decode('utf-8').split()
     print_line('cpu_loads_raw=[{}]'.format(cpu_loads_raw), debug=True)
     cpu_load1 = round(float(float(cpu_loads_raw[0]) / int(cpu_cores) * 100), 1)
     cpu_load5 = round(float(float(cpu_loads_raw[1]) / int(cpu_cores) * 100), 1)
     cpu_load15 = round(float(float(cpu_loads_raw[2]) / int(cpu_cores) * 100), 1)
 
     # Tuple (Hardware, Model Name, NbrCores, BogoMIPS, Serial)
-    rpi_cpu_tuple = (cpu_hardware, _cpu_model, cpu_cores,
+    rpi_cpu_tuple = (cpu_hardware, cpu_model, cpu_cores,
                      cpu_bogoMIPS, cpu_serial, cpu_load1, cpu_load5, cpu_load15)
     print_line('rpi_cpu_tuple=[{}]'.format(rpi_cpu_tuple), debug=True)
 
@@ -475,12 +493,10 @@ def get_device_memory():
     #  MemTotal:         948304 kB
     #  MemFree:           40632 kB
     #  MemAvailable:     513332 kB
-    out = subprocess.Popen("cat /proc/meminfo",
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    lines = stdout.decode('utf-8').split("\n")
+    stdout, _, returncode = invoke_shell_cmd('cat /proc/meminfo')
+    lines = []
+    if not returncode:
+        lines = stdout.decode('utf-8').split("\n")
     trimmed_lines = []
     for curr_line in lines:
         trimmed_line = curr_line.lstrip().rstrip()
@@ -513,13 +529,10 @@ def get_device_model():
     global rpi_model
     global rpi_model_raw
     global rpi_connections
-    cmd_string = '/bin/cat /proc/device-tree/model | /bin/sed -e "s/\\x0//g"'
-    out = subprocess.Popen(cmd_string,
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    rpi_model_raw = stdout.decode('utf-8')
+    stdout, _, returncode = invoke_shell_cmd("/bin/cat /proc/device-tree/model | /bin/sed -e 's/\\x0//g'")
+    rpi_model_raw = 'N/A'
+    if not returncode:
+        rpi_model_raw = stdout.decode('utf-8')
     # now reduce string length (just more compact, same info)
     rpi_model = rpi_model_raw.replace('Raspberry ', 'R').replace(
         'i Model ', 'i 1 Model').replace('Rev ', 'r').replace(' Plus ', '+')
@@ -546,37 +559,29 @@ def get_device_model():
 
 def get_linux_release():
     global rpi_linux_release
-    cmd_string = ('/bin/cat /etc/apt/sources.list | /bin/egrep -v "#" | /usr/bin/awk \'{ print $3 }\' | '
-                  '/bin/sed -e "s/-/ /g" | /usr/bin/cut -f1 -d" " | /bin/grep . | /usr/bin/sort -u')
-    out = subprocess.Popen(cmd_string,
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    rpi_linux_release = stdout.decode('utf-8').rstrip()
+    stdout, _, returncode = invoke_shell_cmd("/bin/cat /etc/apt/sources.list | /bin/egrep -v '#' | /usr/bin/awk '{ print $3 }' | /bin/sed -e 's/-/ /g' | /usr/bin/cut -f1 -d' ' | /bin/grep . | /usr/bin/sort -u")
+    rpi_linux_release = 'N/A'
+    if not returncode:
+        rpi_linux_release = stdout.decode('utf-8').rstrip()
     print_line('rpi_linux_release=[{}]'.format(rpi_linux_release), debug=True)
 
 
 def get_linux_version():
     global rpi_linux_version
-    out = subprocess.Popen("/bin/uname -r",
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    rpi_linux_version = stdout.decode('utf-8').rstrip()
+    stdout, _, returncode = invoke_shell_cmd('/bin/uname -r')
+    rpi_linux_version = 'N/A'
+    if not returncode:
+        rpi_linux_version = stdout.decode('utf-8').rstrip()
     print_line('rpi_linux_version=[{}]'.format(rpi_linux_version), debug=True)
 
 
 def get_hostnames():
     global rpi_hostname
     global rpi_fqdn
-    out = subprocess.Popen("/bin/hostname -f",
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    fqdn_raw = stdout.decode('utf-8').rstrip()
+    stdout, _, returncode = invoke_shell_cmd('/bin/hostname -f')
+    fqdn_raw = 'N/A'
+    if not returncode:
+        fqdn_raw = stdout.decode('utf-8').rstrip()
     print_line('fqdn_raw=[{}]'.format(fqdn_raw), debug=True)
     rpi_hostname = fqdn_raw
     if '.' in fqdn_raw:
@@ -599,12 +604,10 @@ def get_uptime():
     global rpi_uptime_raw
     global rpi_uptime
     global rpi_uptime_sec
-    out = subprocess.Popen("/usr/bin/uptime",
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    rpi_uptime_raw = stdout.decode('utf-8').rstrip().lstrip()
+    stdout, _, returncode = invoke_shell_cmd('/usr/bin/uptime')
+    rpi_uptime_raw = 'N/A'
+    if not returncode:
+        rpi_uptime_raw = stdout.decode('utf-8').rstrip().lstrip()
     print_line('rpi_uptime_raw=[{}]'.format(rpi_uptime_raw), debug=True)
     basicParts = rpi_uptime_raw.split()
     timeStamp = basicParts[0]
@@ -649,13 +652,12 @@ def get_uptime():
 
 
 def get_network_ifs_using_ip(ip_cmd):
-    cmd_str = '{} link show | /bin/egrep -v "link" | /bin/egrep " eth| wlan"'.format(ip_cmd)
-    out = subprocess.Popen(cmd_str,
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    lines = stdout.decode('utf-8').split("\n")
+    cmd_str = '{} link show | /bin/egrep -v "link" | /bin/egrep " eth| wlan"'.format(
+        ip_cmd)
+    stdout, _, returncode = invoke_shell_cmd(cmd_str)
+    lines = []
+    if not returncode:
+        lines = stdout.decode('utf-8').split("\n")
     interface_names = []
     line_count = len(lines)
     if line_count > 2:
@@ -668,8 +670,9 @@ def get_network_ifs_using_ip(ip_cmd):
         trimmed_line = lines[line_idx].lstrip().rstrip()
         if len(trimmed_line) > 0:
             line_parts = trimmed_line.split()
-            interface_name = line_parts[1].replace(':', '')
-            # if interface is within a  container then we have eth0@if77
+            # if interface is within a  container then we have eth0@if77, so
+            # take the leftmost part up to '@' in that case
+            interface_name = line_parts[1].replace(':', '').split('@')[0]
             interface_names.append(interface_name)
 
     print_line('interface_names=[{}]'.format(interface_names), debug=True)
@@ -686,12 +689,10 @@ def get_network_ifs_using_ip(ip_cmd):
 def get_single_interface_details(interface_name):
     cmd_string = '/sbin/ifconfig {} | /bin/egrep "Link|flags|inet |ether |TX packets |RX packets "'.format(
         interface_name)
-    out = subprocess.Popen(cmd_string,
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    lines = stdout.decode('utf-8').split("\n")
+    stdout, _, returncode = invoke_shell_cmd(cmd_string)
+    lines = []
+    if not returncode:
+        lines = stdout.decode('utf-8').split("\n")
     trimmed_lines = []
     for curr_line in lines:
         trimmed_line = curr_line.lstrip().rstrip()
@@ -804,14 +805,10 @@ def get_network_ifs():
     if ip_cmd:
         get_network_ifs_using_ip(ip_cmd)
     else:
-        cmd_string = ('/sbin/ifconfig | /bin/egrep "Link|flags|inet |ether " | '
-                      '/bin/egrep -v -i "lo:|loopback|inet6|\:\:1|127\.0\.0\.1"')
-        out = subprocess.Popen(cmd_string,
-                               shell=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT)
-        stdout, _ = out.communicate()
-        lines = stdout.decode('utf-8').split("\n")
+        stdout, _, returncode = invoke_shell_cmd('/sbin/ifconfig | /bin/egrep "Link|flags|inet |ether " | /bin/egrep -v -i "lo:|loopback|inet6|\:\:1|127\.0\.0\.1"')
+        lines = []
+        if not returncode:
+            lines = stdout.decode('utf-8').split("\n")
         trimmed_lines = []
         for curr_line in lines:
             trimmed_line = curr_line.lstrip().rstrip()
@@ -828,12 +825,10 @@ def get_file_system_drives():
     global rpi_filesystem_space
     global rpi_filesystem_percent
     global rpi_filesystem
-    out = subprocess.Popen("/bin/df -m | /usr/bin/tail -n +2 | /bin/egrep -v 'tmpfs|boot'",
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    lines = stdout.decode('utf-8').split("\n")
+    stdout, _, returncode = invoke_shell_cmd("/bin/df -m | /usr/bin/tail -n +2 | /bin/egrep -v 'tmpfs|boot'")
+    lines = []
+    if not returncode:
+        lines = stdout.decode('utf-8').split("\n")
     trimmed_lines = []
     for curr_line in lines:
         trimmed_line = curr_line.lstrip().rstrip()
@@ -1000,14 +995,13 @@ def get_system_temperature():
     if cmd_fspec and os.access("/dev/vcio", os.R_OK):
         retry_count = 3
         while retry_count > 0 and 'failed' in rpi_gpu_temp_raw:
-            cmd_string = "{} measure_temp | /bin/sed -e 's/\\x0//g'".format(cmd_fspec)
-            out = subprocess.Popen(cmd_string,
-                                   shell=True,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
-            stdout, _ = out.communicate()
-            rpi_gpu_temp_raw = stdout.decode(
-                'utf-8').rstrip().replace('temp=', '').replace('\'C', '')
+            cmd_string = "{} measure_temp | /bin/sed -e 's/\\x0//g'".format(
+                cmd_fspec)
+            stdout, _, returncode = invoke_shell_cmd(cmd_string)
+            rpi_gpu_temp_raw = 'failed'
+            if not returncode:
+                rpi_gpu_temp_raw = stdout.decode(
+                    'utf-8').rstrip().replace('temp=', '').replace('\'C', '')
             retry_count -= 1
             sleep(1)
 
@@ -1038,18 +1032,14 @@ def get_system_temperature():
 def get_system_cpu_temperature():
     cmd_locn1 = '/sys/class/thermal/thermal_zone0/temp'
     cmd_string = '/bin/cat {}'.format(cmd_locn1)
-    if not os.path.exists(cmd_locn1):
-        _rpi_cpu_temp = float('-1.0')
-    else:
-        out = subprocess.Popen(cmd_string,
-                               shell=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT)
-        stdout, _ = out.communicate()
-        rpi_cpu_temp_raw = stdout.decode('utf-8').rstrip()
-        _rpi_cpu_temp = float(rpi_cpu_temp_raw) / 1000.0
-    print_line('_rpi_cpu_temp=[{}]'.format(_rpi_cpu_temp), debug=True)
-    return _rpi_cpu_temp
+    rpi_cpu_temp = float('-1.0')
+    if os.path.exists(cmd_locn1):
+        stdout, _, returncode = invoke_shell_cmd(cmd_string)
+        if not returncode:
+            rpi_cpu_temp_raw = stdout.decode('utf-8').rstrip()
+            rpi_cpu_temp = float(rpi_cpu_temp_raw) / 1000.0
+    print_line('rpi_cpu_temp=[{}]'.format(rpi_cpu_temp), debug=True)
+    return rpi_cpu_temp
 
 
 def get_system_thermal_status():
@@ -1065,16 +1055,16 @@ def get_system_thermal_status():
         rpi_throttle_status.append('Not Available')
     else:
         cmd_string = "{} get_throttled".format(cmd_fspec)
-        out = subprocess.Popen(cmd_string,
-                               shell=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT)
-        stdout, _ = out.communicate()
-        rpi_throttle_status_raw = stdout.decode('utf-8').rstrip()
-        print_line('rpi_throttle_status_raw=[{}]'.format(rpi_throttle_status_raw), debug=True)
+        stdout, _, returncode = invoke_shell_cmd(cmd_string)
+        rpi_throttle_status_raw = ''
+        if not returncode:
+            rpi_throttle_status_raw = stdout.decode('utf-8').rstrip()
+        print_line('rpi_throttle_status_raw=[{}]'.format(
+            rpi_throttle_status_raw), debug=True)
 
-        if 'throttled' not in rpi_throttle_status_raw:
-            rpi_throttle_status.append('bad response [{}] from vcgencmd'.format(rpi_throttle_status_raw))
+        if len(rpi_throttle_status_raw) and not 'throttled' in rpi_throttle_status_raw:
+            rpi_throttle_status.append(
+                'bad response [{}] from vcgencmd'.format(rpi_throttle_status_raw))
         else:
             values = []
             line_parts = rpi_throttle_status_raw.split('=')
@@ -1140,13 +1130,12 @@ def get_last_update_date():
     apt_listdir_filespec = '/var/lib/apt/lists/partial'
     # apt-get dist-upgrade | autoremove update the following file when actions are taken
     apt_lockdir_filespec = '/var/lib/dpkg/lock'
-    cmd_string = '/bin/ls -ltrd {} {}'.format(apt_listdir_filespec, apt_lockdir_filespec)
-    out = subprocess.Popen(cmd_string,
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    lines = stdout.decode('utf-8').split("\n")
+    cmd_string = '/bin/ls -ltrd {} {}'.format(
+        apt_listdir_filespec, apt_lockdir_filespec)
+    stdout, _, returncode = invoke_shell_cmd(cmd_string)
+    lines = []
+    if not returncode:
+        lines = stdout.decode('utf-8').split("\n")
     trimmed_lines = []
     for curr_line in lines:
         trimmed_line = curr_line.lstrip().rstrip()
@@ -1154,36 +1143,36 @@ def get_last_update_date():
             trimmed_lines.append(trimmed_line)
     print_line('trimmed_lines=[{}]'.format(trimmed_lines), debug=True)
 
-    file_spec_latest = ''
+    file_spec_latest = None
     if len(trimmed_lines) > 0:
         last_line_idx = len(trimmed_lines) - 1
         line_parts = trimmed_lines[last_line_idx].split()
         if len(line_parts) > 0:
-            lastPartIdx = len(line_parts) - 1
-            file_spec_latest = line_parts[lastPartIdx]
-    print_line('file_spec_latest=[{}]'.format(file_spec_latest), debug=True)
+            last_part_idx = len(line_parts) - 1
+            file_spec_latest = line_parts[last_part_idx]
+        print_line('file_spec_latest=[{}]'.format(file_spec_latest), debug=True)
 
-    file_mod_date_in_seconds = os.path.getmtime(file_spec_latest)
-    file_mod_date = datetime.fromtimestamp(file_mod_date_in_seconds)
-    rpi_last_update_date = file_mod_date.replace(tzinfo=local_tz)
-    print_line('rpi_last_update_date=[{}]'.format(
-        rpi_last_update_date), debug=True)
+    rpi_last_update_date = None
+    if file_spec_latest:
+        file_mod_date_in_seconds = os.path.getmtime(file_spec_latest)
+        file_mod_date = datetime.fromtimestamp(file_mod_date_in_seconds)
+        rpi_last_update_date = file_mod_date.replace(tzinfo=local_tz)
+        print_line('rpi_last_update_date=[{}]'.format(
+          rpi_last_update_date), debug=True)
 
 
 def get_last_install_date():
     global rpi_last_update_date
-    # apt_log_filespec = '/var/log/dpkg.log'
-    # apt_log_filespec2 = '/var/log/dpkg.log.1'
-    cmd_string = ("/bin/grep --binary-files=text 'status installed' /var/log/dpkg.log "
-                  "/var/log/dpkg.log.1 2>/dev/null | sort | tail -1")
-    out = subprocess.Popen(cmd_string,
-                           shell=True,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, _ = out.communicate()
-    last_installed_pkg_raw = stdout.decode(
-        'utf-8').rstrip().replace('/var/log/dpkg.log:', '').replace('/var/log/dpkg.log.1:', '')
-    print_line('last_installed_pkg_raw=[{}]'.format(last_installed_pkg_raw), debug=True)
+
+    #apt_log_filespec = '/var/log/dpkg.log'
+    #apt_log_filespec2 = '/var/log/dpkg.log.1'
+    stdout, _, returncode = invoke_shell_cmd("/bin/grep --binary-files=text 'status installed' /var/log/dpkg.log /var/log/dpkg.log.1 2>/dev/null | sort | tail -1")
+    last_installed_pkg_raw = ''
+    if not returncode:
+        last_installed_pkg_raw = stdout.decode(
+            'utf-8').rstrip().replace('/var/log/dpkg.log:', '').replace('/var/log/dpkg.log.1:', '')
+    print_line('last_installed_pkg_raw=[{}]'.format(
+        last_installed_pkg_raw), debug=True)
     line_parts = last_installed_pkg_raw.split()
     if len(line_parts) > 1:
         pkg_date_string = '{} {}'.format(line_parts[0], line_parts[1])
@@ -1217,7 +1206,7 @@ def get_number_of_available_updates():
 
 
 # get our hostnames so we can setup MQTT
-getHostnames()
+get_hostnames()
 sensor_name = 'rpi-{}'.format(rpi_hostname)
 
 # get model so we can use it too in MQTT
@@ -1649,8 +1638,7 @@ def send_status(timestamp, _):
     # if rpi_last_update_date_v2 != datetime.min:
     #    rpi_data[K_RPI_DATE_LAST_UPDATE] = rpi_last_update_date_v2.astimezone().replace(microsecond=0).isoformat()
     # else:
-    #    rpi_data[K_RPI_DATE_LAST_UPDATE] = ''
-    if rpi_last_update_date != datetime.min:
+    if rpi_last_update_date and rpi_last_update_date != datetime.min:
         rpi_data[K_RPI_DATE_LAST_UPDATE] = rpi_last_update_date.astimezone().replace(
             microsecond=0).isoformat()
     else:
