@@ -457,20 +457,20 @@ def get_device_cpu_info():
     cpu_bogoMIPS = 0.0  # sum of 'BogoMIPS' lines
     cpu_serial = ''  # 'serial'
     for curr_line in trimmed_lines:
-        lineParts = curr_line.split(':')
-        currValue = '{?unk?}'
-        if len(lineParts) >= 2:
-            currValue = lineParts[1].lstrip().rstrip()
+        line_parts = curr_line.split(':')
+        curr_value = '{?unk?}'
+        if len(line_parts) >= 2:
+            curr_value = line_parts[1].lstrip().rstrip()
         if 'Hardware' in curr_line:
-            cpu_hardware = currValue
+            cpu_hardware = curr_value
         if 'model name' in curr_line:
-            _cpu_model = currValue
+            cpu_model = curr_value
         if 'BogoMIPS' in curr_line:
-            cpu_bogoMIPS += float(currValue)
+            cpu_bogoMIPS += float(curr_value)
         if 'processor' in curr_line:
             cpu_cores += 1
         if 'Serial' in curr_line:
-            cpu_serial = currValue
+            cpu_serial = curr_value
 
     stdout, _, returncode = invoke_shell_cmd('/bin/cat /proc/loadavg')
     cpu_loads_raw = [-1.0] * 3
@@ -482,7 +482,7 @@ def get_device_cpu_info():
     cpu_load15 = round(float(float(cpu_loads_raw[2]) / int(cpu_cores) * 100), 1)
 
     # Tuple (Hardware, Model Name, NbrCores, BogoMIPS, Serial)
-    rpi_cpu_tuple = (cpu_hardware, _cpu_model, cpu_cores,
+    rpi_cpu_tuple = (cpu_hardware, cpu_model, cpu_cores,
                      cpu_bogoMIPS, cpu_serial, cpu_load1, cpu_load5, cpu_load15)
     print_line('rpi_cpu_tuple=[{}]'.format(rpi_cpu_tuple), debug=True)
 
